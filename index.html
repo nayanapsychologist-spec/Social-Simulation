@@ -105,6 +105,7 @@
         <h2 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">1. Timeline Challenge: Eras</h2>
 
         <!-- Draggable Items Container -->
+        <!-- Items inside here will be shuffled on load -->
         <div id="timeline-draggables" class="draggable-container flex flex-wrap justify-center gap-4 mb-12">
             
             <!-- EARLY AGE (3 items - Teal Color) -->
@@ -183,6 +184,7 @@
         <h2 class="text-2xl font-bold text-gray-700 mb-6 border-b pb-2">2. Match the Date: Milestones (Drag the Date to the Milestone)</h2>
 
         <!-- Draggable Date Pool -->
+        <!-- Items inside here will be shuffled on load -->
         <div id="date-draggables-pool" class="flex flex-wrap justify-center gap-4 mb-8 p-4 bg-purple-50 rounded-xl shadow-inner">
             <h3 class="w-full text-lg font-semibold text-purple-700 mb-2 text-center">Available Dates (Drag Me)</h3>
             
@@ -197,6 +199,7 @@
         <!-- Matching Grid (Milestone on left, Drop Target on right) -->
         <div id="match-container" class="space-y-4">
             
+            <!-- Targets remain in order -->
             <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
                 <div class="font-semibold text-gray-700">First Printing Press</div>
                 <div id="target-1440" data-correct-date="1440" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
@@ -262,6 +265,49 @@
         const initialMatchColor = ['bg-purple-300', 'hover:bg-purple-400'];
 
 
+        // --- SHUFFLING UTILITY ---
+        /**
+         * Shuffles the direct child elements of a container (only elements with the 'draggable' class).
+         * Uses the Fisher-Yates (Knuth) algorithm.
+         * @param {string} parentElementId The ID of the container element whose children should be shuffled.
+         */
+        function shuffleElements(parentElementId) {
+            const parent = document.getElementById(parentElementId);
+            if (!parent) return;
+
+            // Get only the draggable children
+            let children = Array.from(parent.querySelectorAll('.draggable'));
+
+            for (let i = children.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                
+                // Swap the DOM elements
+                // This complex swap ensures no unnecessary repaints, but a simpler appendChild loop is also common:
+                
+                // 1. Get nodes to swap
+                const nodeA = children[i];
+                const nodeB = children[j];
+                
+                // 2. Perform swap using insertBefore logic
+                const parentNode = nodeA.parentNode;
+                const siblingA = nodeA.nextSibling === nodeB ? nodeA : nodeA.nextSibling;
+
+                if (nodeA.nextSibling === nodeB) {
+                    // B is right after A
+                    parentNode.insertBefore(nodeB, nodeA);
+                } else {
+                    // Normal case
+                    parentNode.insertBefore(nodeB, nodeA);
+                    parentNode.insertBefore(nodeA, siblingA);
+                }
+
+                // Update the children array to reflect the DOM swap for subsequent iterations
+                children[i] = nodeB;
+                children[j] = nodeA;
+            }
+        }
+
+
         // --- DRAG AND DROP SETUP ---
 
         // Function to set up event listeners (called on initial load and after a reset if needed)
@@ -287,7 +333,12 @@
                 zone.addEventListener('drop', drop);
             });
         }
-        initializeDraggables(); // Run on load
+        
+        // SHUFFLE on load
+        shuffleElements('timeline-draggables');
+        shuffleElements('date-draggables-pool');
+        
+        initializeDraggables(); // Run on load after shuffling
 
         function dragStart(e) {
             e.dataTransfer.setData('text/plain', e.target.id);
@@ -499,7 +550,6 @@
 
         /**
          * Checks Activity 1 (Timeline) for correctness and provides feedback.
-         * Note: This function is now the click handler for the Activity 1 button.
          */
         function checkActivity1() {
             // 1. Reset feedback on all elements before check
@@ -562,7 +612,6 @@
 
         /**
          * Checks Activity 2 (Matching) for correctness, reverts incorrect items, and provides feedback.
-         * Note: This function is now the click handler for the Activity 2 button.
          */
         function checkActivity2() {
             // 1. Reset feedback on all elements before check
