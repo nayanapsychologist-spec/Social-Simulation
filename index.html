@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolution of Communication Drag & Drop</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the draggable items */
+        .draggable {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+            z-index: 10;
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Styles for the timeline drop zones (Activity 1) */
+        .dropzone {
+            border: 3px dashed #d1d5db;
+            transition: background-color 0.2s, border-color 0.2s;
+            min-height: 250px; 
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Allow items to wrap within the zone */
+            flex-wrap: wrap; 
+            justify-content: flex-start;
+        }
+
+        /* Styles for the matching drop targets (Activity 2) */
+        .match-target {
+            border-radius: 0.5rem;
+            transition: border-color 0.2s, background-color 0.2s;
+            /* Default styling for the empty drop area */
+            border: 2px dashed #a5b4fc; /* Light indigo dashed border */
+            background-color: #f8fafc; /* Light gray background */
+        }
+
+        .dropzone.drag-over, .match-target.drag-over {
+            background-color: #f3f4f6;
+            border-color: #4f46e5;
+        }
+
+        /* Style for correctly placed containers */
+        .correct {
+            background-color: #d1fae5; /* Green light */
+            border-color: #059669; /* Darker green */
+        }
+        /* Style for correctly placed draggable items */
+        .correct-item {
+            background-color: #34d399 !important; /* Green item */
+        }
+
+        /* Style for incorrectly placed containers */
+        .incorrect {
+            background-color: #fee2e2; /* Red light */
+            border-color: #ef4444; /* Darker red */
+        }
+        /* Style for incorrectly placed draggable items */
+        .incorrect-item {
+            background-color: #fca5a5 !important; /* Red item */
+        }
+
+        /* Prevent default browser image dragging */
+        img {
+            pointer-events: none;
+        }
+
+        /* Responsive grid adjustments */
+        @media (max-width: 768px) {
+            .dropzone {
+                min-height: 150px;
+            }
+            .draggable-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+                padding: 0.5rem;
+            }
+            .draggable {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div id="game-container" class="w-full max-w-6xl bg-white p-6 md:p-10 shadow-2xl rounded-xl">
+        <h1 class="text-4xl font-extrabold text-indigo-700 mb-2 text-center">
+            Communication Evolution Challenge
+        </h1>
+        <p class="text-lg text-gray-600 mb-8 text-center">
+            Test your knowledge of communication history with two activities below!
+        </p>
+
+        <!-- --- Activity 1: Timeline Challenge --- -->
+        <h2 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">1. Timeline Challenge: Eras</h2>
+
+        <!-- Draggable Items Container -->
+        <div id="timeline-draggables" class="draggable-container flex flex-wrap justify-center gap-4 mb-12">
+            
+            <!-- EARLY AGE (3 items - Teal Color) -->
+            <div id="item-tablet" data-era="early-age" class="draggable p-3 bg-teal-100 rounded-lg shadow-md w-36 text-center hover:bg-teal-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Clay Tablet">🧱</span>
+                <p class="font-semibold text-xs">Clay Tablet</p>
+            </div>
+            <div id="item-pigeon" data-era="early-age" class="draggable p-3 bg-teal-100 rounded-lg shadow-md w-36 text-center hover:bg-teal-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Homing Pigeon">🕊️</span>
+                <p class="font-semibold text-xs">Homing Pigeon</p>
+            </div>
+            <div id="item-scroll" data-era="early-age" class="draggable p-3 bg-teal-100 rounded-lg shadow-md w-36 text-center hover:bg-teal-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Handwritten Scroll">📜</span>
+                <p class="font-semibold text-xs">Handwritten Scroll</p>
+            </div>
+
+            <!-- 19TH CENTURY (3 items - Yellow Color) -->
+            <div id="item-telephone" data-era="19th-century" class="draggable p-3 bg-yellow-100 rounded-lg shadow-md w-36 text-center hover:bg-yellow-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Telephone">☎️</span>
+                <p class="font-semibold text-xs">Telephone</p>
+            </div>
+            <div id="item-telegraph" data-era="19th-century" class="draggable p-3 bg-yellow-100 rounded-lg shadow-md w-36 text-center hover:bg-yellow-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Telegraph">⚡</span>
+                <p class="font-semibold text-xs">Electric Telegraph</p>
+            </div>
+            <div id="item-typewriter" data-era="19th-century" class="draggable p-3 bg-yellow-100 rounded-lg shadow-md w-36 text-center hover:bg-yellow-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Typewriter">⌨️</span>
+                <p class="font-semibold text-xs">Typewriter</p>
+            </div>
+
+            <!-- MODERN AGE (3 items - Sky Color) -->
+            <div id="item-satellite" data-era="modern-age" class="draggable p-3 bg-sky-100 rounded-lg shadow-md w-36 text-center hover:bg-sky-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Satellite">📡</span>
+                <p class="font-semibold text-xs">Communication Satellite</p>
+            </div>
+            <div id="item-radio-tv" data-era="modern-age" class="draggable p-3 bg-sky-100 rounded-lg shadow-md w-36 text-center hover:bg-sky-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Radio and Television">📺</span>
+                <p class="font-semibold text-xs">Radio/Television</p>
+            </div>
+            <div id="item-internet" data-era="modern-age" class="draggable p-3 bg-sky-100 rounded-lg shadow-md w-36 text-center hover:bg-sky-200">
+                <span class="text-3xl block mb-1" role="img" aria-label="Internet and Email">📧</span>
+                <p class="font-semibold text-xs">Email/Internet</p>
+            </div>
+        </div>
+
+        <!-- Drop Zones Container (Timeline) -->
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Drop Zone 1: Early Age (5000 years ago) -->
+            <div id="drop-early-age" data-era="early-age" class="dropzone rounded-xl p-4 bg-gray-100 shadow-inner">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Early Age</h3>
+                <p class="text-sm text-gray-500 mb-4">(5,000+ Years Ago)</p>
+            </div>
+            <!-- Drop Zone 2: 19th Century -->
+            <div id="drop-19th-century" data-era="19th-century" class="dropzone rounded-xl p-4 bg-gray-100 shadow-inner">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">The Invention Era</h3>
+                <p class="text-sm text-gray-500 mb-4">(1800s)</p>
+            </div>
+            <!-- Drop Zone 3: Modern Age -->
+            <div id="drop-modern-age" data-era="modern-age" class="dropzone rounded-xl p-4 bg-gray-100 shadow-inner">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Modern Age</h3>
+                <p class="text-sm text-gray-500 mb-4">(20th Century & Beyond)</p>
+            </div>
+        </div>
+        
+        <!-- Check Button for Activity 1 (Moved Here) -->
+        <div class="mt-6 flex justify-center">
+            <button id="check-button-1" onclick="checkActivity1()" class="px-8 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 text-base">
+                Check Timeline Activity 1
+            </button>
+        </div>
+
+        <!-- --- Separator --- -->
+        <div class="my-12 border-t-4 border-dashed border-indigo-200"></div>
+
+        <!-- --- Activity 2: Match the Date --- -->
+        <h2 class="text-2xl font-bold text-gray-700 mb-6 border-b pb-2">2. Match the Date: Milestones (Drag the Date to the Milestone)</h2>
+
+        <!-- Draggable Date Pool -->
+        <div id="date-draggables-pool" class="flex flex-wrap justify-center gap-4 mb-8 p-4 bg-purple-50 rounded-xl shadow-inner">
+            <h3 class="w-full text-lg font-semibold text-purple-700 mb-2 text-center">Available Dates (Drag Me)</h3>
+            
+            <div id="date-1876" data-date="1876" class="draggable p-3 bg-purple-300 rounded-lg shadow-md w-24 text-center hover:bg-purple-400 text-sm font-bold">1876</div>
+            <div id="date-1901" data-date="1901" class="draggable p-3 bg-purple-300 rounded-lg shadow-md w-24 text-center hover:bg-purple-400 text-sm font-bold">1901</div>
+            <div id="date-1440" data-date="1440" class="draggable p-3 bg-purple-300 rounded-lg shadow-md w-24 text-center hover:bg-purple-400 text-sm font-bold">1440</div>
+            <div id="date-1837" data-date="1837" class="draggable p-3 bg-purple-300 rounded-lg shadow-md w-24 text-center hover:bg-purple-400 text-sm font-bold">1837</div>
+            <div id="date-1957" data-date="1957" class="draggable p-3 bg-purple-300 rounded-lg shadow-md w-24 text-center hover:bg-purple-400 text-sm font-bold">1957</div>
+        </div>
+
+
+        <!-- Matching Grid (Milestone on left, Drop Target on right) -->
+        <div id="match-container" class="space-y-4">
+            
+            <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
+                <div class="font-semibold text-gray-700">First Printing Press</div>
+                <div id="target-1440" data-correct-date="1440" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
+                <div class="font-semibold text-gray-700">Electric Telegraph Patented</div>
+                <div id="target-1837" data-correct-date="1837" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
+                <div class="font-semibold text-gray-700">First Successful Telephone Call</div>
+                <div id="target-1876" data-correct-date="1876" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
+                <div class="font-semibold text-gray-700">Transatlantic Radio Signal Sent</div>
+                <div id="target-1901" data-correct-date="1901" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 items-center p-3 bg-white shadow-md rounded-lg border border-gray-200">
+                <div class="font-semibold text-gray-700">First Communication Satellite Launched</div>
+                <div id="target-1957" data-correct-date="1957" class="match-target bg-gray-50 h-10 flex items-center justify-center text-sm">Drop Date Here</div>
+            </div>
+        </div>
+
+
+        <!-- Check Button for Activity 2 and Global Feedback Box -->
+        <div class="mt-10 flex flex-col items-center">
+            <button id="check-button-2" onclick="checkActivity2()" class="px-8 py-3 bg-purple-600 text-white font-bold rounded-full shadow-lg hover:bg-purple-700 transition duration-300 text-base">
+                Check Date Matching Activity 2
+            </button>
+            
+            <!-- Message Box for feedback (instead of alert) -->
+            <div id="message-box" class="mt-4 p-4 rounded-lg text-center hidden w-full max-w-lg" role="alert"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global constants for item counts
+        const TOTAL_TIMELINE_ITEMS = 9;
+        const TOTAL_MATCH_ITEMS = 5;
+        const ALL_ITEMS_TOTAL = TOTAL_TIMELINE_ITEMS + TOTAL_MATCH_ITEMS;
+
+        // Select all draggables and all drop targets (both timeline and matching)
+        let draggables = document.querySelectorAll('.draggable');
+        const dropzones = document.querySelectorAll('.dropzone');
+        let matchTargets = document.querySelectorAll('.match-target');
+        const messageBox = document.getElementById('message-box');
+        
+        // Color classes for resetting and feedback
+        const ALL_ITEM_COLORS = ['bg-yellow-100', 'bg-teal-100', 'bg-sky-100', 'bg-purple-300', 
+                                 'hover:bg-yellow-200', 'hover:bg-teal-200', 'hover:bg-sky-200', 'hover:bg-purple-400', 
+                                 'correct-item', 'incorrect-item'];
+        
+        // Map to hold the initial background classes for resetting timeline items
+        const initialTimelineColors = {
+            'early-age': ['bg-teal-100', 'hover:bg-teal-200'],
+            '19th-century': ['bg-yellow-100', 'hover:bg-yellow-200'],
+            'modern-age': ['bg-sky-100', 'hover:bg-sky-200']
+        };
+        // Initial color for matching date items
+        const initialMatchColor = ['bg-purple-300', 'hover:bg-purple-400'];
+
+
+        // --- DRAG AND DROP SETUP ---
+
+        // Function to set up event listeners (called on initial load and after a reset if needed)
+        function initializeDraggables() {
+             draggables = document.querySelectorAll('.draggable');
+             matchTargets = document.querySelectorAll('.match-target');
+
+            draggables.forEach(item => {
+                item.setAttribute('draggable', true);
+                item.removeEventListener('dragstart', dragStart); // Prevent duplicates
+                item.addEventListener('dragstart', dragStart);
+                item.removeEventListener('touchstart', handleTouchStart); // Prevent duplicates
+                item.addEventListener('touchstart', handleTouchStart);
+            });
+
+            [...dropzones, ...matchTargets].forEach(zone => {
+                zone.removeEventListener('dragover', dragOver);
+                zone.removeEventListener('dragleave', dragLeave);
+                zone.removeEventListener('drop', drop);
+                
+                zone.addEventListener('dragover', dragOver);
+                zone.addEventListener('dragleave', dragLeave);
+                zone.addEventListener('drop', drop);
+            });
+        }
+        initializeDraggables(); // Run on load
+
+        function dragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.id);
+            setTimeout(() => e.target.classList.add('opacity-40'), 0);
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        }
+
+        function dragLeave() {
+            this.classList.remove('drag-over');
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            const itemId = e.dataTransfer ? e.dataTransfer.getData('text/plain') : currentDragElement?.id;
+            const draggedElement = document.getElementById(itemId);
+
+            if (!draggedElement) return;
+
+            // Handle the single-item match target (Activity 2) logic
+            if (this.classList.contains('match-target')) {
+                // Check if the target already has an item
+                if (this.querySelector('.draggable')) {
+                    // Find the original container for the existing item (The date pool)
+                    const existingItem = this.querySelector('.draggable');
+                    const originalContainer = document.getElementById('date-draggables-pool');
+                    
+                    if (originalContainer) {
+                        // Reset properties before returning to the pool
+                        existingItem.style.position = 'static'; 
+                        existingItem.style.zIndex = '10';
+                        originalContainer.appendChild(existingItem);
+                    }
+                }
+                
+                // Move the new element into the drop zone
+                draggedElement.classList.remove('opacity-40');
+                draggedElement.style.position = 'static'; 
+                this.textContent = ''; // Clear placeholder text
+                this.appendChild(draggedElement);
+            } 
+            // Handle multi-item timeline drop zone (Activity 1) logic
+            else if (this.classList.contains('dropzone')) {
+                draggedElement.classList.remove('opacity-40');
+                draggedElement.style.position = 'static'; 
+                this.appendChild(draggedElement);
+            }
+
+            currentDragElement = null; 
+        }
+
+        // --- Touch Functions ---
+        let currentDragElement = null;
+
+        function handleTouchStart(e) {
+            const item = e.currentTarget;
+            e.stopPropagation();
+            currentDragElement = item;
+            item.style.position = 'absolute';
+            item.style.zIndex = '1000';
+            
+            const touch = e.touches[0];
+            const rect = item.getBoundingClientRect();
+            const offsetX = touch.clientX - rect.left;
+            const offsetY = touch.clientY - rect.top;
+
+            const moveAt = (pageX, pageY) => {
+                item.style.left = pageX - offsetX + 'px';
+                item.style.top = pageY - offsetY + 'px';
+            };
+            moveAt(touch.pageX, touch.pageY);
+
+            const onTouchMove = (e) => {
+                e.preventDefault(); 
+                const moveTouch = e.touches[0];
+                moveAt(moveTouch.pageX, moveTouch.pageY);
+            };
+
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+
+            const onTouchEnd = (e) => {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+
+                const finalTouch = e.changedTouches[0];
+                let droppedSuccessfully = false;
+                
+                const allDropAreas = [...dropzones, ...matchTargets];
+
+                for (const zone of allDropAreas) {
+                    const rect = zone.getBoundingClientRect();
+                    
+                    // Check if drop coordinates are within the zone
+                    if (finalTouch.clientX >= rect.left && finalTouch.clientX <= rect.right &&
+                        finalTouch.clientY >= rect.top && finalTouch.clientY <= rect.bottom) {
+                        
+                        // Handle single-item match target logic (Activity 2)
+                        if (zone.classList.contains('match-target')) {
+                            if (zone.querySelector('.draggable')) {
+                                const existingItem = zone.querySelector('.draggable');
+                                const originalContainer = document.getElementById('date-draggables-pool');
+                                if (originalContainer) {
+                                    // Reset and return existing item to pool
+                                    existingItem.style.position = 'static'; 
+                                    existingItem.style.zIndex = '10';
+                                    originalContainer.appendChild(existingItem);
+                                }
+                            }
+                            
+                            // Move the new element into the drop zone
+                            zone.appendChild(item);
+                            item.style.position = 'static';
+                            item.style.zIndex = '10';
+                            zone.textContent = ''; // Clear placeholder
+                            currentDragElement = null;
+                            droppedSuccessfully = true;
+                            break; 
+                        } 
+                        // Handle multi-item timeline drop zone (Activity 1) logic
+                        else if (zone.classList.contains('dropzone')) {
+                            zone.appendChild(item);
+                            item.style.position = 'static';
+                            item.style.zIndex = '10';
+                            currentDragElement = null;
+                            droppedSuccessfully = true;
+                            break; 
+                        }
+                    }
+                }
+
+                // If not dropped in a zone, return to original container 
+                if (!droppedSuccessfully && currentDragElement) {
+                    const originalContainerId = item.dataset.era ? 'timeline-draggables' : 'date-draggables-pool';
+                    const container = document.getElementById(originalContainerId);
+                    container.appendChild(item);
+                    item.style.position = 'static';
+                    item.style.zIndex = '10';
+                    currentDragElement = null;
+                }
+            };
+
+            document.addEventListener('touchend', onTouchEnd, { once: true });
+        }
+
+
+        // --- GAME LOGIC ---
+
+        function resetFeedback() {
+            // Reset dropzone colors (Activity 1) and match target colors (Activity 2)
+            [...dropzones].forEach(zone => {
+                zone.classList.remove('correct', 'incorrect');
+            });
+            [...matchTargets].forEach(zone => {
+                zone.classList.remove('correct', 'incorrect');
+                if (zone.classList.contains('match-target') && !zone.querySelector('.draggable')) {
+                    zone.textContent = 'Drop Date Here';
+                }
+            });
+            
+            // Reset item colors
+            draggables.forEach(item => {
+                item.classList.remove(...ALL_ITEM_COLORS); 
+                const era = item.dataset.era;
+                const date = item.dataset.date;
+
+                if (era) {
+                    item.classList.add(...initialTimelineColors[era]); 
+                } else if (date) {
+                    item.classList.add(...initialMatchColor);
+                }
+            });
+        }
+
+        /**
+         * Checks the overall completion status of both activities for a grand success message.
+         * @returns {boolean} True if both activities are completely correct.
+         */
+        function isGameComplete() {
+            // Check if all timeline items are placed in a correct timeline zone (Activity 1)
+            const timelineItems = document.querySelectorAll('.draggable[data-era]');
+            let timelineCorrect = 0;
+            timelineItems.forEach(item => {
+                const parentZone = item.closest('.dropzone');
+                if (parentZone && item.dataset.era === parentZone.dataset.era) {
+                    timelineCorrect++;
+                }
+            });
+            
+            // Check if all match items are placed in a correct match target (Activity 2)
+            let matchCorrect = 0;
+            matchTargets.forEach(target => {
+                const droppedItem = target.querySelector('.draggable[data-date]');
+                if (droppedItem && droppedItem.dataset.date === target.dataset.correctDate) {
+                    matchCorrect++;
+                }
+            });
+
+            return timelineCorrect === TOTAL_TIMELINE_ITEMS && matchCorrect === TOTAL_MATCH_ITEMS;
+        }
+
+        function checkGrandSuccess() {
+            return `🎉🥳 DOUBLE VICTORY! You correctly placed all ${ALL_ITEMS_TOTAL} items! Outstanding work! Congratulations! 🥳🎉`;
+        }
+
+        /**
+         * Checks Activity 1 (Timeline) for correctness and provides feedback.
+         * Note: This function is now the click handler for the Activity 1 button.
+         */
+        function checkActivity1() {
+            // 1. Reset feedback on all elements before check
+            resetFeedback();
+
+            let correctCount = 0;
+
+            dropzones.forEach(zone => {
+                const zoneEra = zone.dataset.era;
+                const droppedItems = zone.querySelectorAll('.draggable[data-era]'); 
+                
+                // Clear container feedback first
+                zone.classList.remove('correct', 'incorrect');
+                let hasIncorrect = false;
+
+                droppedItems.forEach(droppedItem => {
+                    const itemEra = droppedItem.dataset.era;
+
+                    // Clear item feedback first
+                    droppedItem.classList.remove('correct-item', 'incorrect-item');
+
+                    if (itemEra === zoneEra) {
+                        droppedItem.classList.add('correct-item');
+                        correctCount++;
+                    } else {
+                        droppedItem.classList.add('incorrect-item');
+                        hasIncorrect = true;
+                    }
+                });
+
+                if (droppedItems.length > 0) {
+                     if (hasIncorrect) {
+                         zone.classList.add('incorrect');
+                     } else {
+                         zone.classList.add('correct');
+                     }
+                }
+            });
+
+            // 2. Check for overall success and display feedback
+            let message = '';
+            let messageClass = '';
+            
+            if (isGameComplete()) {
+                 message = checkGrandSuccess();
+                 messageClass = 'bg-green-100 text-green-700 border-green-400 border-4 animate-pulse';
+            } else if (correctCount === TOTAL_TIMELINE_ITEMS) {
+                message = `🎉 Timeline Activity 1 COMPLETE! You correctly placed all ${TOTAL_TIMELINE_ITEMS} items. Now focus on Activity 2!`;
+                messageClass = 'bg-green-100 text-green-700 border-green-400 border-2';
+            } else if (correctCount > 0) {
+                message = `Great effort on the Timeline! You placed ${correctCount} out of ${TOTAL_TIMELINE_ITEMS} correctly. Review the items that turned red and try again.`;
+                messageClass = 'bg-yellow-100 text-yellow-700 border-yellow-400 border-2';
+            } else {
+                message = `Keep trying on the Timeline! Focus on which era each item belongs to.`;
+                messageClass = 'bg-red-100 text-red-700 border-red-400 border-2';
+            }
+
+            showMessage(message, messageClass);
+        }
+
+        /**
+         * Checks Activity 2 (Matching) for correctness, reverts incorrect items, and provides feedback.
+         * Note: This function is now the click handler for the Activity 2 button.
+         */
+        function checkActivity2() {
+            // 1. Reset feedback on all elements before check
+            resetFeedback();
+
+            let correctCount = 0;
+            const datePool = document.getElementById('date-draggables-pool');
+            
+            matchTargets.forEach(target => {
+                const correctDate = target.dataset.correctDate; 
+                const droppedItem = target.querySelector('.draggable[data-date]'); 
+
+                // Clear container feedback first
+                target.classList.remove('correct', 'incorrect');
+
+                if (droppedItem) {
+                    const droppedDate = droppedItem.dataset.date; 
+                    
+                    target.textContent = ''; // Ensure target text is empty if item is present
+                    droppedItem.classList.remove('correct-item', 'incorrect-item'); // Clear item feedback first
+
+                    if (droppedDate === correctDate) {
+                        // Correct match
+                        target.classList.add('correct');
+                        droppedItem.classList.add('correct-item');
+                        correctCount++;
+                    } else {
+                        // Incorrect match - REVERT TO POOL
+                        target.classList.add('incorrect');
+                        droppedItem.classList.add('incorrect-item');
+
+                        if (datePool) {
+                            // Move the incorrect item back to the pool
+                            droppedItem.style.position = 'static';
+                            droppedItem.style.zIndex = '10';
+                            datePool.appendChild(droppedItem);
+                            
+                            // Reset target's display
+                            target.classList.remove('incorrect', 'correct'); 
+                            target.textContent = 'Drop Date Here';
+                        }
+                    }
+                } else {
+                    // Empty target
+                    target.classList.remove('correct', 'incorrect');
+                    target.textContent = 'Drop Date Here';
+                }
+            });
+
+            // 2. Check for overall success and display feedback
+            let message = '';
+            let messageClass = '';
+
+            if (isGameComplete()) {
+                 message = checkGrandSuccess();
+                 messageClass = 'bg-green-100 text-green-700 border-green-400 border-4 animate-pulse';
+            } else if (correctCount === TOTAL_MATCH_ITEMS) {
+                message = `🎉 Date Matching Activity 2 COMPLETE! You correctly matched all ${TOTAL_MATCH_ITEMS} dates. Now focus on Activity 1!`;
+                messageClass = 'bg-green-100 text-green-700 border-green-400 border-2';
+            } else if (correctCount > 0) {
+                message = `Good job on Date Matching! You placed ${correctCount} out of ${TOTAL_MATCH_ITEMS} correctly. Incorrect dates have been returned to the pool.`;
+                messageClass = 'bg-yellow-100 text-yellow-700 border-yellow-400 border-2';
+            } else {
+                message = `Keep trying on Date Matching! Review the dates—all incorrect dates have been returned to the pool.`;
+                messageClass = 'bg-red-100 text-red-700 border-red-400 border-2';
+            }
+
+            showMessage(message, messageClass);
+        }
+
+        function showMessage(text, className) {
+            messageBox.textContent = text;
+            messageBox.className = `mt-4 p-4 rounded-lg text-center transition-all duration-500 block w-full max-w-lg ${className}`;
+        }
+    </script>
+</body>
+</html>
