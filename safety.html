@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Superstar Challenge (Grade 3 - Icons)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for Inter font and some custom colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'safe-green': '#34D399',
+                        'unsafe-red': '#F87171',
+                        'main-blue': '#60A5FA',
+                        'card-bg': '#F9FAFB', /* Light background for the image/text card */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Ensuring smooth transitions for feedback */
+        .card-transition {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="w-full max-w-lg bg-white shadow-2xl rounded-xl p-6 md:p-10 border-b-8 border-main-blue card-transition">
+        
+        <!-- Header & Score -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">Safety Superstar Challenge</h1>
+            <p class="text-lg text-main-blue font-medium mt-2">Test your Grade 3 Safety Knowledge!</p>
+            <div class="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                <span class="text-xl font-semibold text-gray-700">Question <span id="current-index">1</span> of <span id="total-scenarios"></span></span>
+                <span class="text-2xl font-bold text-safe-green">Score: <span id="score">0</span></span>
+            </div>
+        </div>
+
+        <!-- Scenario Card (Now includes a large Emoji Icon) -->
+        <div id="scenario-card" class="bg-card-bg p-4 rounded-xl border-2 border-main-blue shadow-lg min-h-[250px] flex flex-col justify-center items-center text-center card-transition">
+            <!-- Icon/Emoji is now the main visual element -->
+            <div id="scenario-icon" class="text-6xl mb-4"></div>
+            <p id="scenario-text" class="text-lg md:text-xl font-semibold text-gray-800 px-2"></p>
+        </div>
+
+        <!-- Feedback Box -->
+        <div id="feedback-box" class="mt-6 p-4 rounded-lg text-white font-medium text-center hidden card-transition">
+            <p id="feedback-message" class="text-lg"></p>
+            <p id="safe-tip" class="text-sm italic mt-2"></p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-8 grid grid-cols-2 gap-4">
+            <button id="safe-btn" onclick="checkAnswer('Safe')" 
+                    class="py-3 px-4 text-white font-bold text-lg rounded-xl shadow-md transition duration-200 
+                           bg-safe-green hover:bg-emerald-600 focus:outline-none focus:ring-4 focus:ring-safe-green/50 disabled:opacity-50">
+                ✅ Safe
+            </button>
+            <button id="unsafe-btn" onclick="checkAnswer('Unsafe')" 
+                    class="py-3 px-4 text-white font-bold text-lg rounded-xl shadow-md transition duration-200 
+                           bg-unsafe-red hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-unsafe-red/50 disabled:opacity-50">
+                🛑 Unsafe
+            </button>
+        </div>
+
+        <!-- Next Button (Hidden initially) -->
+        <div class="mt-6 text-center">
+            <button id="next-btn" onclick="nextScenario()" 
+                    class="hidden py-3 px-8 bg-main-blue text-white font-bold text-xl rounded-xl shadow-lg hover:bg-blue-600 
+                           transition duration-200 focus:outline-none focus:ring-4 focus:ring-main-blue/50">
+                Next Scenario &rarr;
+            </button>
+        </div>
+        
+        <!-- Restart Button (Hidden initially) -->
+        <div class="mt-6 text-center">
+            <button id="restart-btn" onclick="startGame()" 
+                    class="hidden py-3 px-8 bg-gray-500 text-white font-bold text-xl rounded-xl shadow-lg hover:bg-gray-700 
+                           transition duration-200 focus:outline-none focus:ring-4 focus:ring-gray-500/50">
+                Play Again
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Data for the game: Scenarios, answers, feedback, and the new icon (emoji)
+        const scenarios = [
+            {
+                question: "You find a key to a cabinet you're not supposed to open. You open it to see what's inside.",
+                icon: "🔑",
+                answer: "Unsafe",
+                feedback: "Correct! Exploring unauthorized areas, especially cabinets with chemicals or tools, can be dangerous. Always ask permission first.",
+                safe_action: "Leave the key alone and tell an adult that you found it.",
+            },
+            {
+                question: "You wear a helmet every time you ride your bike or scooter.",
+                icon: "🚲",
+                answer: "Safe",
+                feedback: "Excellent! Helmets protect your head and brain, which is the most important part of your body. Great job being safe!",
+                safe_action: "Keep wearing that helmet every ride!",
+            },
+            {
+                question: "A website pops up asking for your full name and address to win a free video game.",
+                icon: "💻",
+                answer: "Unsafe",
+                feedback: "Right! Never share personal information like your full name, address, or phone number online without a parent's permission.",
+                safe_action: "Close the window immediately and tell a trusted adult what happened.",
+            },
+            {
+                question: "You are running a fever. You take medicine from the cupboard without asking a grown-up.",
+                icon: "💊",
+                answer: "Unsafe",
+                feedback: "Exactly! Only trusted adults can give you medicine, even if you feel sick. Taking the wrong dose or type is very unsafe.",
+                safe_action: "Tell an adult how you feel and let them get the right medicine for you.",
+            },
+            {
+                question: "You see two friends arguing and one pushes the other. You go tell the nearest teacher immediately.",
+                icon: "🗣️",
+                answer: "Safe",
+                feedback: "Absolutely! Reporting bullying or physical fights to a trusted adult is the best way to keep everyone safe. You are a safety leader!",
+                safe_action: "Always report aggressive behavior to an adult right away.",
+            },
+            {
+                question: "You want to pet a dog you see tied up outside a store, so you walk right up to it.",
+                icon: "🐕",
+                answer: "Unsafe",
+                feedback: "That's right! Never approach an unfamiliar dog, especially one that is tied up, as they might be scared or protective. Always ask the owner first!",
+                safe_action: "Always ask the owner first if you can pet their dog, and approach slowly.",
+            },
+            {
+                question: "You are about to cross the street, so you look left, right, and left again.",
+                icon: "🚦",
+                answer: "Safe",
+                feedback: "You got it! This is the correct way to check for cars and keep yourself safe when walking near traffic. Great street smarts!",
+                safe_action: "Continue to look both ways, every time.",
+            }
+        ];
+
+        let currentScenarioIndex = 0;
+        let score = 0;
+        let gameActive = true;
+
+        const scenarioTextEl = document.getElementById('scenario-text');
+        const scenarioIconEl = document.getElementById('scenario-icon'); // Updated element reference
+        const scoreEl = document.getElementById('score');
+        const currentIndexEl = document.getElementById('current-index');
+        const totalScenariosEl = document.getElementById('total-scenarios');
+        const feedbackBoxEl = document.getElementById('feedback-box');
+        const feedbackMessageEl = document.getElementById('feedback-message');
+        const safeTipEl = document.getElementById('safe-tip');
+        const safeBtn = document.getElementById('safe-btn');
+        const unsafeBtn = document.getElementById('unsafe-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const gameContainer = document.getElementById('game-container');
+
+        /**
+         * Starts or restarts the game, resetting scores and state.
+         */
+        function startGame() {
+            currentScenarioIndex = 0;
+            score = 0;
+            gameActive = true;
+            scoreEl.textContent = score;
+            totalScenariosEl.textContent = scenarios.length;
+            nextBtn.classList.add('hidden');
+            restartBtn.classList.add('hidden');
+            gameContainer.classList.remove('border-safe-green', 'border-unsafe-red');
+            gameContainer.classList.add('border-main-blue');
+            // Show buttons again when restarting
+            safeBtn.classList.remove('hidden');
+            unsafeBtn.classList.remove('hidden');
+            resetButtons();
+            loadScenario();
+        }
+
+        /**
+         * Loads the current scenario into the card UI.
+         */
+        function loadScenario() {
+            if (currentScenarioIndex < scenarios.length) {
+                const current = scenarios[currentScenarioIndex];
+                
+                // Update Icon and Text
+                scenarioIconEl.textContent = current.icon;
+                scenarioTextEl.textContent = current.question; // Keeping the text for full context
+                
+                currentIndexEl.textContent = currentScenarioIndex + 1;
+
+                feedbackBoxEl.classList.add('hidden');
+                feedbackBoxEl.classList.remove('bg-safe-green', 'bg-unsafe-red');
+
+                // Re-enable and reset button appearance
+                resetButtons();
+
+                // Reset card border
+                document.getElementById('scenario-card').classList.remove('border-safe-green', 'border-unsafe-red');
+                document.getElementById('scenario-card').classList.add('border-main-blue');
+
+            } else {
+                showResults();
+            }
+        }
+
+        /**
+         * Handles the user clicking Safe or Unsafe.
+         * @param {string} choice - 'Safe' or 'Unsafe'
+         */
+        function checkAnswer(choice) {
+            if (!gameActive) return;
+
+            gameActive = false; // Disable clicks until next is pressed
+            const current = scenarios[currentScenarioIndex];
+            const isCorrect = (choice === current.answer);
+
+            // Update score and show feedback
+            if (isCorrect) {
+                score++;
+                scoreEl.textContent = score;
+                showFeedback(true, current.feedback, current.safe_action);
+            } else {
+                showFeedback(false, `Oops! That was ${current.answer}. ${current.feedback}`, current.safe_action);
+            }
+
+            // Highlight the buttons based on correctness
+            highlightButtons(choice, current.answer);
+            
+            // Show Next/Finish button
+            if (currentScenarioIndex < scenarios.length - 1) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                // If it's the last question, show results directly after feedback
+                setTimeout(showResults, 1500); // Give a brief moment to see the feedback
+            }
+        }
+
+        /**
+         * Moves to the next scenario if available.
+         */
+        function nextScenario() {
+            currentScenarioIndex++;
+            gameActive = true;
+            nextBtn.classList.add('hidden');
+            resetButtons();
+            loadScenario();
+        }
+
+        /**
+         * Applies styles to buttons after an answer is chosen.
+         * @param {string} userChoice - The button the user clicked.
+         * @param {string} correctAnswer - The correct answer.
+         */
+        function highlightButtons(userChoice, correctAnswer) {
+            const chosenBtn = document.getElementById(userChoice.toLowerCase() + '-btn');
+            const correctBtn = document.getElementById(correctAnswer.toLowerCase() + '-btn');
+
+            // Disable both buttons
+            safeBtn.disabled = true;
+            unsafeBtn.disabled = true;
+
+            // Mark the correct button visually (border)
+            correctBtn.classList.add('border-4', 'border-yellow-400', 'ring-4', 'ring-yellow-300');
+
+            // If the user was wrong, visually mark the wrong button
+            if (userChoice !== correctAnswer) {
+                chosenBtn.classList.add('opacity-50', 'grayscale');
+            }
+        }
+
+        /**
+         * Resets the button styles and enables them for the next question.
+         */
+        function resetButtons() {
+            safeBtn.disabled = false;
+            unsafeBtn.disabled = false;
+            safeBtn.classList.remove('border-4', 'border-yellow-400', 'ring-4', 'ring-yellow-300', 'opacity-50', 'grayscale');
+            unsafeBtn.classList.remove('border-4', 'border-yellow-400', 'ring-4', 'ring-yellow-300', 'opacity-50', 'grayscale');
+        }
+
+        /**
+         * Shows feedback to the user and updates the container border.
+         * @param {boolean} correct - True if the answer was correct.
+         * @param {string} message - The main feedback message.
+         * @param {string} tip - A helpful safety tip.
+         */
+        function showFeedback(correct, message, tip) {
+            feedbackBoxEl.classList.remove('hidden');
+            feedbackBoxEl.classList.add(correct ? 'bg-safe-green' : 'bg-unsafe-red');
+            gameContainer.classList.remove('border-main-blue', 'border-unsafe-red', 'border-safe-green');
+            gameContainer.classList.add(correct ? 'border-safe-green' : 'border-unsafe-red');
+            feedbackMessageEl.textContent = message;
+            safeTipEl.textContent = `⭐ Remember: ${tip}`;
+
+            document.getElementById('scenario-card').classList.remove('border-main-blue', 'border-unsafe-red', 'border-safe-green');
+            document.getElementById('scenario-card').classList.add(correct ? 'border-safe-green' : 'border-unsafe-red');
+        }
+
+        /**
+         * Shows the final results screen.
+         */
+        function showResults() {
+            gameActive = false;
+            nextBtn.classList.add('hidden');
+            restartBtn.classList.remove('hidden');
+
+            const percentage = Math.round((score / scenarios.length) * 100);
+            let finalMessage = "🌟 Wow, you are a Safety Superstar! You got a perfect score!";
+            let icon = "🌟"; // Default icon for perfect score
+            
+            if (percentage < 100) {
+                icon = "👍";
+                finalMessage = `👍 Great work! You scored ${score} out of ${scenarios.length} (${percentage}%). Keep learning!`;
+            }
+            if (percentage < 70) {
+                icon = "💡";
+                finalMessage = `💡 Good try! You scored ${score} out of ${scenarios.length} (${percentage}%). Review the scenarios and play again to become a Safety Superstar!`;
+            }
+
+            scenarioTextEl.textContent = finalMessage;
+            scenarioIconEl.textContent = icon;
+            feedbackBoxEl.classList.add('hidden');
+            safeBtn.classList.add('hidden');
+            unsafeBtn.classList.add('hidden');
+            gameContainer.classList.add('border-safe-green');
+        }
+
+        // Initialize the game when the script loads
+        window.onload = function() {
+            startGame();
+        };
+
+    </script>
+</body>
+</html>
