@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Master - Learning Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #3b82f6; /* Blue 500 */
+            --color-secondary: #fcd34d; /* Amber 300 */
+            --color-background: #f3f4f6; /* Gray 100 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            min-height: 100vh;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb; /* Blue 600 */
+        }
+        .match-card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            text-align: center;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            box-sizing: border-box;
+        }
+        .match-card-front {
+            background-color: var(--color-primary);
+            color: white;
+            font-size: 1.1rem;
+            transform: rotateY(0deg);
+            border: 3px solid var(--color-primary);
+        }
+        .match-card-back {
+            background-color: #e5e7eb;
+            color: #1f2937;
+            font-size: 0.9rem;
+            transform: rotateY(180deg);
+            border: 3px solid #e5e7eb;
+        }
+        .match-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .match-card.flipped .match-card-inner {
+            transform: rotateY(180deg);
+        }
+        .match-card.matched {
+            pointer-events: none;
+            opacity: 0.5;
+            transition: opacity 1s;
+        }
+        /* Style for drag and drop */
+        .draggable { cursor: grab; background-color: #fff; border: 2px solid #ddd; padding: 10px; margin: 5px; border-radius: 8px; transition: all 0.2s; }
+        .draggable.dragging { opacity: 0.4; }
+        .dropzone { border: 2px dashed var(--color-primary); border-radius: 12px; min-height: 200px; padding: 10px; margin: 10px 0; background-color: #e0f2fe; }
+        .dropzone h3 { border-bottom: 2px solid var(--color-primary); padding-bottom: 5px; margin-bottom: 10px; }
+        .sequence-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: #ffffff;
+            border-left: 5px solid var(--color-secondary);
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+        .sequence-item:hover {
+            background-color: #fef3c7;
+        }
+        .sequence-container {
+            border: 2px solid #ccc;
+            min-height: 400px;
+            padding: 10px;
+            border-radius: 12px;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header and Score -->
+    <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2">
+            <span class="text-blue-600">Energy</span> <span class="text-amber-500">Master</span>
+        </h1>
+        <p class="text-xl text-gray-600">Test your knowledge on the Age of Machines!</p>
+        <div class="mt-4 flex justify-center space-x-6 text-lg font-semibold">
+            <div id="scoreDisplay" class="text-blue-600">Score: 0</div>
+            <div id="timerDisplay" class="text-red-600">Time: 60s</div>
+        </div>
+        <div id="messageBox" class="text-center mt-3 p-3 rounded-lg text-white font-semibold hidden"></div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main id="gameArea" class="max-w-4xl mx-auto card p-6 md:p-10">
+        <!-- Content will be injected here -->
+    </main>
+
+    <!-- Leaderboard -->
+    <section id="leaderboardSection" class="max-w-4xl mx-auto mt-8 card p-6">
+        <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-gray-800">Top Energy Masters</h2>
+        <div id="leaderboardList" class="space-y-2">
+            <!-- Leaderboard items will be loaded here -->
+            <p class="text-gray-500">Loading scores...</p>
+        </div>
+    </section>
+
+    <!-- Modal for Rapid Fire Answers/Results -->
+    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-4 text-center text-blue-600">Level Complete!</h3>
+            <p id="modalMessage" class="text-gray-700 mb-6 text-center"></p>
+            <div id="modalContent" class="space-y-3 text-sm"></div>
+            <div class="flex justify-center mt-6">
+                <button id="modalButton" class="btn-primary" onclick="window.game.nextLevel()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('Debug');
+
+        let db, auth;
+        let userId = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Game Constants and Data
+        const LEVEL_TIME = 60; // seconds
+
+        const levelData = {
+            1: {
+                title: "Level 1: Sequence the Development",
+                instructions: "Arrange the cards in the correct historical order. Click the cards in the correct order below and watch them move into the sequence box.",
+                items: [
+                    "Early Stone Tools", "Discovery of Copper", "Discovery of Bronze", "Discovery of Iron",
+                    "Invention of the Wheel", "Carts & Boats", "The Steam Engine", "Industrial Revolution"
+                ],
+                correctSequence: [
+                    "Early Stone Tools", "Discovery of Copper", "Discovery of Bronze", "Discovery of Iron",
+                    "Invention of the Wheel", "Carts & Boats", "The Steam Engine", "Industrial Revolution" // Industrial Revolution follows Steam Engine in the flow
+                ]
+            },
+            2: {
+                title: "Level 2: Key Discovery Match",
+                instructions: "Find the matching pairs: Discovery and its primary Implication.",
+                matches: [
+                    { name: "Steam Engine", implication: "Factory System, mass production" },
+                    { name: "Iron", implication: "Clear forests, better hunting" },
+                    { name: "Copper", implication: "First metal discovered" },
+                    { name: "Wheel", implication: "Revolutionized transport" }
+                ]
+            },
+            3: {
+                title: "Level 3: Energy Source Sort",
+                instructions: "Drag and drop the energy sources into the correct category (Conventional or Alternative). Incorrect drops will snap back to the source.",
+                categories: {
+                    conventional: ["Coal", "Petroleum", "Electricity"],
+                    alternative: ["Solar", "Wind", "Hydroelectricity"]
+                }
+            },
+            4: {
+                title: "Level 4: Rapid Fire Round",
+                instructions: "Answer these 3 questions quickly! Select the best answer for each question.",
+                questions: [
+                    {
+                        text: "Name the most important invention that changed transport forever.",
+                        options: ["Steam Engine", "Wheel", "Iron Tools"],
+                        answer: "Wheel"
+                    },
+                    {
+                        text: "What was the most important result of the Industrial Revolution?",
+                        options: ["People moved to farms", "Shift to machine-made goods (factories)", "Discovery of Copper"],
+                        answer: "Shift to machine-made goods (factories)"
+                    },
+                    {
+                        text: "Is Petroleum a Conventional or Alternative energy source?",
+                        options: ["Conventional", "Alternative"],
+                        answer: "Conventional"
+                    }
+                ]
+            },
+            5: {
+                title: "Level 5: Grand Final - Sustainability Challenges",
+                instructions: "These 5 questions require application of energy knowledge to real-world sustainability choices. Choose the best option for each scenario.",
+                questions: [
+                    {
+                        text: "Your city needs to power its bus system. Which option is best for long-term air quality and resource sustainability?",
+                        options: ["Diesel", "Electric (charged by fossil fuels)", "Electric (charged by renewables)"],
+                        answer: "Electric (charged by renewables)"
+                    },
+                    {
+                        text: "You want to heat your new home efficiently in a moderate climate. Which is the most sustainable choice?",
+                        options: ["Oil Furnace", "Standard Electric Heater", "Geothermal Heat Pump"],
+                        answer: "Geothermal Heat Pump"
+                    },
+                    {
+                        text: "A large power grid is trying to reach 100% renewable energy. Which source often requires substantial energy storage or fossil fuel backup due to its intermittency?",
+                        options: ["Nuclear Power", "Hydroelectric Dam", "Solar/Wind Farms"],
+                        answer: "Solar/Wind Farms"
+                    },
+                    {
+                        text: "When building a new commercial office, which structural material generally has the lowest embodied carbon footprint (energy used in production)?",
+                        options: ["Steel", "Concrete", "Mass Timber/Wood"],
+                        answer: "Mass Timber/Wood"
+                    },
+                    {
+                        text: "Which action has the largest immediate impact on reducing your household's personal carbon footprint related to resource use?",
+                        options: ["Switching to LED bulbs", "Reducing car travel by 10%", "Reducing meat consumption"],
+                        answer: "Reducing meat consumption"
+                    }
+                ]
+            }
+        };
+
+        class Game {
+            constructor() {
+                this.currentLevel = 0;
+                this.score = 0;
+                this.timer = null;
+                this.timeLeft = LEVEL_TIME;
+                this.isAuthReady = false;
+                this.gameArea = document.getElementById('gameArea');
+                this.scoreDisplay = document.getElementById('scoreDisplay');
+                this.timerDisplay = document.getElementById('timerDisplay');
+                this.messageBox = document.getElementById('messageBox');
+                this.modal = document.getElementById('modal');
+                this.matchSelection = []; // For Level 2
+                this.level3Score = 0; // For Level 3
+                this.levelAnswers = {}; // For Levels 4 and 5
+                this.modalScaffold = ''; // For Level 1 feedback
+            }
+
+            async init() {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            this.isAuthReady = true;
+                            console.log("Firebase Auth Ready. User ID:", userId);
+                            // Only start game and load scores after auth is ready
+                            await this.loadLeaderboard();
+                            if (this.currentLevel === 0) {
+                                this.startScreen();
+                            }
+                        } else {
+                            // If sign-in fails or user logs out (shouldn't happen with custom token flow)
+                            userId = crypto.randomUUID();
+                            this.isAuthReady = true;
+                            console.log("Signed in anonymously. User ID:", userId);
+                            await this.loadLeaderboard();
+                            if (this.currentLevel === 0) {
+                                this.startScreen();
+                            }
+                        }
+                    });
+
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                } catch (error) {
+                    console.error("Firebase initialization or sign-in failed:", error);
+                    this.isAuthReady = true; // Still allow game to start, but without leaderboard/saving
+                    if (this.currentLevel === 0) {
+                        this.startScreen();
+                    }
+                }
+            }
+
+            showMessage(text, isError = false) {
+                this.messageBox.textContent = text;
+                this.messageBox.className = `text-center mt-3 p-3 rounded-lg text-white font-semibold ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+                this.messageBox.style.display = 'block';
+                setTimeout(() => {
+                    this.messageBox.style.display = 'none';
+                }, 3000);
+            }
+
+            // --- Game Flow Functions ---
+
+            startScreen() {
+                this.gameArea.innerHTML = `
+                    <div class="text-center p-8">
+                        <h2 class="text-3xl font-bold mb-4 text-blue-600">Welcome, Future Master!</h2>
+                        <p class="text-lg text-gray-700 mb-6">You will play 3 introductory levels, a Rapid Fire round, and the Grand Final Sustainability Challenge. You have 60 seconds for each level. Points are awarded for speed and accuracy.</p>
+                        <p class="text-sm text-gray-500 mb-8">Your session ID: <span class="font-mono text-xs p-1 bg-gray-100 rounded">${userId || 'N/A'}</span></p>
+                        <button class="btn-primary text-xl" onclick="window.game.nextLevel()">Start Game</button>
+                    </div>
+                `;
+            }
+
+            nextLevel() {
+                if (this.currentLevel === 5) { // Check for the new final level
+                    this.showFinalScore();
+                    return;
+                }
+                this.currentLevel++;
+                this.timeLeft = LEVEL_TIME;
+                this.messageBox.style.display = 'none';
+                this.hideModal();
+
+                const levelNum = this.currentLevel;
+                const levelConfig = levelData[levelNum];
+                
+                let submitButtonHTML = '';
+                let skipButtonHTML = '';
+                
+                if (levelNum < 4) { // Levels 1, 2, 3
+                    submitButtonHTML = `<button class="btn-primary" onclick="window.game.checkAnswer()">Submit Answer</button>`;
+                    skipButtonHTML = `<button class="text-sm text-gray-500 underline hover:text-gray-700 transition-colors" onclick="window.game.skipLevel()">Skip Level</button>`;
+                } else if (levelNum === 4) { // Level 4
+                    submitButtonHTML = `<button class="btn-primary" onclick="window.game.checkRapidFire(4)">Submit Answers</button>`;
+                } else if (levelNum === 5) { // Level 5 (Grand Final)
+                    submitButtonHTML = `<button class="btn-primary" onclick="window.game.checkRapidFire(5)">Finish Game</button>`;
+                }
+
+                this.gameArea.innerHTML = `
+                    <h2 class="text-3xl font-bold mb-3 text-blue-600">${levelConfig.title}</h2>
+                    <p class="text-gray-700 mb-6">${levelConfig.instructions}</p>
+                    <div id="levelContent"></div>
+                    <div class="mt-8 flex justify-between items-center">
+                        ${skipButtonHTML}
+                        ${submitButtonHTML}
+                    </div>
+                `;
+                
+                this.startTimer();
+                this.levelAnswers = {}; // Reset answers for rapid fire levels
+
+                switch (levelNum) {
+                    case 1:
+                        this.setupLevel1();
+                        break;
+                    case 2:
+                        this.setupLevel2();
+                        break;
+                    case 3:
+                        this.setupLevel3();
+                        break;
+                    case 4:
+                        this.setupRapidFire(4);
+                        break;
+                    case 5:
+                        this.setupRapidFire(5);
+                        break;
+                }
+            }
+            
+            startTimer() {
+                if (this.timer) clearInterval(this.timer);
+                this.timerDisplay.textContent = `Time: ${this.timeLeft}s`;
+
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.timerDisplay.textContent = `Time: ${this.timeLeft}s`;
+
+                    if (this.timeLeft <= 0) {
+                        clearInterval(this.timer);
+                        
+                        // Check logic for time out
+                        if (this.currentLevel < 4) {
+                            this.checkAnswer(true); // Auto-check for sequence/match/sort
+                        } else {
+                            this.currentLevel === 4 ? this.checkRapidFire(4, true) : this.checkRapidFire(5, true);
+                        }
+                    }
+                }, 1000);
+            }
+
+            // --- Skip Level Function (Levels 1-3 only) ---
+            skipLevel() {
+                clearInterval(this.timer);
+                this.hideModal();
+
+                // Show modal results
+                document.getElementById('modalTitle').textContent = `Level ${this.currentLevel} Skipped`;
+                document.getElementById('modalMessage').textContent = `You chose to skip this level. Your score remains unchanged, and you will proceed to the next challenge.`;
+                document.getElementById('modalContent').innerHTML = `Current Total Score: <span class="text-blue-600 font-bold">${this.score}</span>`;
+                document.getElementById('modalButton').textContent = "Go to Next Level";
+                this.showModal();
+            }
+
+            // --- Level 1: Sequence ---
+
+            setupLevel1() {
+                const config = levelData[1];
+                const items = [...config.items]; // Copy
+                
+                // Shuffle items for the source list
+                for (let i = items.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [items[i], items[j]] = [items[j], items[i]];
+                }
+
+                const contentDiv = document.getElementById('levelContent');
+                contentDiv.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-1">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-700">Sequence Target</h3>
+                            <div id="sequenceTarget" class="sequence-container space-y-2 bg-green-50 border-green-300">
+                                <p class="text-sm text-gray-500 p-2">Click items below to place them here...</p>
+                            </div>
+                        </div>
+                        <div class="col-span-1">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-700">Items to Sequence</h3>
+                            <div id="sequenceSource" class="sequence-container space-y-2 bg-amber-50 border-amber-300">
+                                ${items.map(item => `<div class="sequence-item card" data-item="${item}" onclick="window.game.level1Click(this)">${item}</div>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                this.level1Sequence = [];
+            }
+
+            level1Click(element) {
+                const item = element.getAttribute('data-item');
+                this.level1Sequence.push(item);
+                
+                const target = document.getElementById('sequenceTarget');
+                target.innerHTML += `<div class="sequence-item bg-gray-200" data-item="${item}">${item}</div>`;
+                element.remove();
+
+                if (this.level1Sequence.length === levelData[1].items.length) {
+                     this.checkAnswer();
+                }
+            }
+
+            // --- Level 2: Matching/Memory ---
+
+            setupLevel2() {
+                const config = levelData[2];
+                let cards = [];
+                config.matches.forEach(m => {
+                    cards.push({ id: crypto.randomUUID(), type: 'name', content: m.name, matchId: m.name, label: 'Discovery' });
+                    cards.push({ id: crypto.randomUUID(), type: 'implication', content: m.implication, matchId: m.name, label: 'Implication' });
+                });
+
+                // Shuffle cards
+                for (let i = cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [cards[i], cards[j]] = [cards[j], cards[i]];
+                }
+
+                const contentDiv = document.getElementById('levelContent');
+                contentDiv.className = "grid grid-cols-4 gap-4";
+                contentDiv.innerHTML = cards.map(card => `
+                    <div id="${card.id}" data-match-id="${card.matchId}" class="match-card h-28 md:h-36 rounded-xl cursor-pointer" onclick="window.game.level2Click(this)">
+                        <div class="match-card-inner">
+                            <!-- Hidden content on the back face -->
+                            <div class="match-card-back match-card-face absolute inset-0 rounded-xl">${card.content}</div>
+                            <!-- Generic label on the front face -->
+                            <div class="match-card-front match-card-face absolute inset-0 rounded-xl">${card.label}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                this.matchSelection = [];
+                this.matchedPairs = 0;
+            }
+
+            level2Click(element) {
+                if (this.matchSelection.length === 2 || element.classList.contains('matched') || element.classList.contains('flipped')) {
+                    return;
+                }
+
+                element.classList.add('flipped');
+                this.matchSelection.push(element);
+
+                if (this.matchSelection.length === 2) {
+                    const [card1, card2] = this.matchSelection;
+                    const matchId1 = card1.getAttribute('data-match-id');
+                    const matchId2 = card2.getAttribute('data-match-id');
+
+                    if (matchId1 === matchId2) {
+                        this.score += 50;
+                        this.scoreDisplay.textContent = `Score: ${this.score}`;
+                        this.showMessage("Match found! +50 Points.");
+                        this.matchedPairs++;
+                        
+                        setTimeout(() => {
+                            card1.classList.add('matched');
+                            card2.classList.add('matched');
+                            this.matchSelection = [];
+                            if (this.matchedPairs === levelData[2].matches.length) {
+                                this.checkAnswer();
+                            }
+                        }, 500);
+                    } else {
+                        this.showMessage("No match. Try again!", true);
+                        setTimeout(() => {
+                            card1.classList.remove('flipped');
+                            card2.classList.remove('flipped');
+                            this.matchSelection = [];
+                        }, 1000);
+                    }
+                }
+            }
+
+            // --- Level 3: Sorting (Drag and Drop) ---
+
+            setupLevel3() {
+                const config = levelData[3];
+                const allItems = [...config.categories.conventional, ...config.categories.alternative];
+                
+                // Shuffle items for the source list
+                for (let i = allItems.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allItems[i], allItems[j]] = [allItems[j], allItems[i]];
+                }
+
+                const contentDiv = document.getElementById('levelContent');
+                contentDiv.innerHTML = `
+                    <div id="dragSource" class="mb-8 p-4 bg-gray-100 rounded-xl border border-gray-300 flex flex-wrap gap-3 justify-center">
+                        ${allItems.map(item => `<div id="drag-${item}" data-item="${item}" class="draggable card font-semibold" draggable="true">${item}</div>`).join('')}
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div id="drop-conventional" data-category="conventional" class="dropzone">
+                            <h3 class="text-2xl font-bold text-red-600 mb-2">Conventional (Non-Renewable)</h3>
+                        </div>
+                        <div id="drop-alternative" data-category="alternative" class="dropzone">
+                            <h3 class="text-2xl font-bold text-green-600 mb-2">Alternative (Renewable)</h3>
+                        </div>
+                    </div>
+                `;
+
+                this.level3Score = 0;
+                document.querySelectorAll('.draggable').forEach(item => {
+                    item.addEventListener('dragstart', this.dragStart.bind(this));
+                });
+                document.querySelectorAll('.dropzone').forEach(zone => {
+                    zone.addEventListener('dragover', this.dragOver);
+                    zone.addEventListener('drop', this.drop.bind(this));
+                });
+            }
+
+            dragStart(e) {
+                e.dataTransfer.setData('text/plain', e.target.id);
+                e.target.classList.add('dragging');
+            }
+
+            dragOver(e) {
+                e.preventDefault(); // Necessary to allow dropping
+            }
+
+            drop(e) {
+                e.preventDefault();
+                const id = e.dataTransfer.getData('text/plain');
+                const draggableElement = document.getElementById(id);
+                
+                // Ensure we drop on the dropzone itself or an element inside it
+                const dropZone = e.target.closest('.dropzone');
+                if (!dropZone) {
+                    draggableElement.classList.remove('dragging');
+                    return;
+                }
+
+                const correctCategory = dropZone.getAttribute('data-category');
+                const itemName = draggableElement.getAttribute('data-item');
+                
+                let isCorrect = false;
+                const config = levelData[3];
+
+                if (correctCategory === 'conventional' && config.categories.conventional.includes(itemName)) {
+                    isCorrect = true;
+                } else if (correctCategory === 'alternative' && config.categories.alternative.includes(itemName)) {
+                    isCorrect = true;
+                }
+
+                if (isCorrect) {
+                    dropZone.appendChild(draggableElement);
+                    draggableElement.classList.remove('dragging');
+                    draggableElement.style.border = '2px solid #10b981'; // Green border
+                    this.level3Score++;
+                    this.score += 50;
+                    this.scoreDisplay.textContent = `Score: ${this.score}`;
+                    this.showMessage(`Correct! ${itemName} is ${correctCategory}. +50 Pts.`);
+                    
+                    if (this.level3Score === 6) { // 3 conventional + 3 alternative
+                        setTimeout(() => this.checkAnswer(), 500);
+                    }
+                } else {
+                    // Incorrect drop: penalize and snap back to source
+                    draggableElement.classList.remove('dragging');
+                    
+                    // --- SNAP BACK LOGIC ---
+                    const dragSource = document.getElementById('dragSource');
+                    dragSource.appendChild(draggableElement);
+                    draggableElement.style.border = '2px solid #ddd'; // Reset border
+                    // -----------------------
+                    
+                    this.score = Math.max(0, this.score - 25);
+                    this.scoreDisplay.textContent = `Score: ${this.score}`;
+                    this.showMessage(`Incorrect! -25 Pts. Snapped back to source.`, true);
+                }
+            }
+            
+            // --- Levels 4 & 5: Rapid Fire / Grand Final ---
+
+            setupRapidFire(levelNum) {
+                const config = levelData[levelNum];
+                const contentDiv = document.getElementById('levelContent');
+                contentDiv.innerHTML = config.questions.map((q, index) => `
+                    <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-white">
+                        <p class="font-semibold text-lg text-gray-800 mb-3">${index + 1}. ${q.text}</p>
+                        <div class="flex flex-wrap gap-3" id="q-options-${levelNum}-${index}">
+                            ${q.options.map(option => `
+                                <button
+                                    class="py-2 px-4 rounded-full text-sm border border-blue-400 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                                    onclick="window.game.selectRapidFireAnswer(${levelNum}, ${index}, '${option.replace(/'/g, "\\'")}')"
+                                    data-q-index="${index}"
+                                    data-level="${levelNum}"
+                                    data-value="${option}"
+                                >
+                                    ${option}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                this.levelAnswers[levelNum] = {};
+            }
+
+            selectRapidFireAnswer(levelNum, qIndex, answer) {
+                this.levelAnswers[levelNum][qIndex] = answer;
+                
+                // Visually mark the selected button
+                document.querySelectorAll(`button[data-level="${levelNum}"][data-q-index="${qIndex}"]`).forEach(btn => {
+                    if (btn.getAttribute('data-value') === answer) {
+                        btn.classList.replace('bg-blue-50', 'bg-blue-600');
+                        btn.classList.replace('text-blue-700', 'text-white');
+                        btn.classList.replace('border-blue-400', 'border-blue-600');
+                    } else {
+                        btn.classList.replace('bg-blue-600', 'bg-blue-50');
+                        btn.classList.replace('text-white', 'text-blue-700');
+                        btn.classList.replace('border-blue-600', 'border-blue-400');
+                    }
+                });
+            }
+
+            checkRapidFire(levelNum, timedOut = false) {
+                clearInterval(this.timer);
+                const config = levelData[levelNum];
+                const answers = this.levelAnswers[levelNum] || {};
+                let correctCount = 0;
+                let resultDetails = ``;
+                let scoreChange = 0;
+
+                config.questions.forEach((q, index) => {
+                    const selected = answers[index];
+                    const isCorrect = selected === q.answer;
+                    
+                    resultDetails += `<p class="border-b pb-2 ${isCorrect ? 'text-green-600' : 'text-red-600'}">
+                        Q${index + 1}: ${q.text} <br> 
+                        <strong>Your Answer:</strong> ${selected || 'N/A'} (Correct: ${q.answer})
+                    </p>`;
+
+                    if (isCorrect) {
+                        correctCount++;
+                        this.score += 100; // 100 points per correct answer
+                        scoreChange += 100;
+                    } else {
+                         this.score = Math.max(0, this.score - 50); // Small penalty for incorrect answer
+                         scoreChange -= 50;
+                    }
+                });
+                
+                // Add time bonus if not timed out
+                let timeBonus = 0;
+                if (!timedOut) {
+                    timeBonus = this.timeLeft * 5;
+                    this.score += timeBonus;
+                    scoreChange += timeBonus;
+                }
+
+                this.scoreDisplay.textContent = `Score: ${this.score}`;
+
+                document.getElementById('modalTitle').textContent = levelNum === 5 ? "Grand Final Complete!" : "Rapid Fire Complete!";
+                
+                let message = `You scored ${correctCount}/${config.questions.length} correct. Net score change: ${scoreChange > 0 ? '+' : ''}${scoreChange} points.`;
+                if (timedOut) {
+                    message = `Time ran out for Level ${levelNum}! ${message}`;
+                }
+
+                document.getElementById('modalMessage').textContent = message;
+                document.getElementById('modalContent').innerHTML = resultDetails;
+                
+                document.getElementById('modalButton').textContent = levelNum < 5 ? "Go to Next Level" : "View Final Score";
+                this.showModal();
+            }
+            
+            // --- General Check Answer (Levels 1-3) ---
+            
+            checkAnswer(timedOut = false) {
+                clearInterval(this.timer);
+                let isCorrect = false;
+                let levelScore = 0;
+                let message = "";
+                this.modalScaffold = '';
+                
+                switch (this.currentLevel) {
+                    case 1:
+                        isCorrect = JSON.stringify(this.level1Sequence) === JSON.stringify(levelData[1].correctSequence);
+                        if (isCorrect) {
+                            levelScore = 200 + this.timeLeft * 5; // Base + Time bonus
+                            message = `Perfect Sequence! You earned ${levelScore} points.`;
+                            
+                            // Generate scaffold feedback for the modal
+                            const scaffoldHtml = levelData[1].correctSequence.map((item, index) => 
+                                `<div class="p-2 bg-blue-100 rounded-md text-blue-800 font-medium text-left">${index + 1}. ${item}</div>`
+                            ).join('');
+                            
+                            this.modalScaffold = `<h4 class="font-bold text-lg text-gray-700 mb-2">The Correct Timeline:</h4><div class="mt-4 space-y-1">${scaffoldHtml}</div>`;
+                            
+                        } else {
+                            message = "The sequence was incorrect. Practice the flow! 0 points awarded.";
+                        }
+                        break;
+                    case 2:
+                        isCorrect = this.matchedPairs === levelData[2].matches.length;
+                        if (isCorrect) {
+                             levelScore = this.matchedPairs * 50 + this.timeLeft * 5;
+                            message = `All ${this.matchedPairs} pairs matched! You earned a time bonus. Total for level: ${levelScore} points.`;
+                        } else {
+                            message = `Time's up! You only matched ${this.matchedPairs} pairs.`;
+                        }
+                        break;
+                    case 3:
+                        isCorrect = this.level3Score === 6;
+                        // Score was already updated during drag/drop
+                        if (isCorrect) {
+                            levelScore = this.timeLeft * 5; // Only time bonus needed
+                            message = `Excellent Sorting! You earned a time bonus.`;
+                        } else {
+                            levelScore = this.timeLeft * 5; 
+                            message = `Time's up! You correctly sorted ${this.level3Score} items.`;
+                        }
+                        break;
+                }
+
+                if (timedOut && this.currentLevel < 4) {
+                    message = `Time ran out for Level ${this.currentLevel}! ${message}`;
+                }
+                
+                // Update total score
+                this.score += levelScore;
+                this.scoreDisplay.textContent = `Score: ${this.score}`;
+
+                // Show modal results
+                document.getElementById('modalTitle').textContent = isCorrect ? "Level Complete!" : "Level End";
+                document.getElementById('modalMessage').textContent = message;
+                
+                // Use the scaffold if available, otherwise show current score
+                document.getElementById('modalContent').innerHTML = this.modalScaffold
+                    ? this.modalScaffold
+                    : `Current Total Score: <span class="text-blue-600 font-bold">${this.score}</span>`;
+
+                document.getElementById('modalButton').textContent = this.currentLevel < 5 ? "Go to Next Level" : "View Final Score";
+                this.showModal();
+            }
+
+            showModal() {
+                this.modal.classList.remove('hidden');
+            }
+
+            hideModal() {
+                this.modal.classList.add('hidden');
+            }
+
+            showFinalScore() {
+                clearInterval(this.timer);
+                
+                // Prompt for name only if we successfully authenticated
+                let playerName = "Player";
+                if (this.isAuthReady) {
+                    // Use prompt for quick input (as confirm/alert are forbidden)
+                    const name = window.prompt("Congratulations! You are an Energy Master! Please enter your name for the leaderboard:", "Player");
+                    playerName = name && name.trim().length > 0 ? name : "Player";
+                    this.saveScore(playerName, this.score);
+                } else {
+                    playerName = "Guest";
+                }
+
+                this.gameArea.innerHTML = `
+                    <div class="text-center p-8">
+                        <h2 class="text-4xl font-extrabold text-amber-500 mb-4">🏆 Grand Master, ${playerName}! 🏆</h2>
+                        <p class="text-2xl text-gray-800 mb-8">Your Final Score is: <span class="text-blue-600 font-black">${this.score}</span></p>
+                        <p class="text-lg text-gray-700 mb-6">You have mastered the history of machines, energy sources, and sustainability application!</p>
+                        <button class="btn-primary text-xl" onclick="window.location.reload()">Play Again</button>
+                    </div>
+                `;
+                this.modal.classList.add('hidden');
+                this.loadLeaderboard(); // Ensure final score is shown
+            }
+            
+            // --- Firestore Leaderboard ---
+
+            async saveScore(name, score) {
+                if (!this.isAuthReady) {
+                    console.warn("Firestore not ready. Score not saved.");
+                    return;
+                }
+                try {
+                    const scoreDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'energymaster_scores', userId);
+                    await setDoc(scoreDocRef, {
+                        userId: userId,
+                        name: name,
+                        score: score,
+                        timestamp: Date.now()
+                    });
+                    console.log("Score saved successfully!");
+                } catch (e) {
+                    console.error("Error saving score: ", e);
+                }
+            }
+
+            async loadLeaderboard() {
+                if (!this.isAuthReady) {
+                    document.getElementById('leaderboardList').innerHTML = `<p class="text-red-500">Leaderboard temporarily unavailable. Authentication pending or failed.</p>`;
+                    return;
+                }
+                
+                let maxRetries = 5;
+                let delay = 500; // Start with 500ms
+                let querySnapshot = null;
+
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const scoresCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'energymaster_scores');
+                        // Fetch top 10 scores
+                        const q = query(scoresCollectionRef, orderBy('score', 'desc'), limit(10));
+                        
+                        querySnapshot = await getDocs(q);
+                        
+                        // If successful, break the loop
+                        break;
+                        
+                    } catch (e) {
+                        const errorMessage = e.message || String(e);
+                        // Only retry on permission error
+                        if (i < maxRetries - 1 && errorMessage.includes('Missing or insufficient permissions')) {
+                            console.warn(`Firestore permission denied, retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                        } else {
+                            // If it's the last attempt or a different error, handle the final failure
+                            console.error("Error loading leaderboard: ", e);
+                            document.getElementById('leaderboardList').innerHTML = `<p class="text-red-500">Error loading leaderboard: ${errorMessage}</p>`;
+                            return; // Exit function on final failure
+                        }
+                    }
+                }
+
+                // If querySnapshot is still null after the loop (shouldn't happen with the current flow, but safe guard)
+                if (!querySnapshot) return;
+                
+                const scores = [];
+                querySnapshot.forEach((doc) => {
+                    scores.push(doc.data());
+                });
+                
+                const leaderboardList = document.getElementById('leaderboardList');
+                leaderboardList.innerHTML = ''; // Clear loading message
+
+                if (scores.length === 0) {
+                    leaderboardList.innerHTML = '<p class="text-gray-500">No scores posted yet. Be the first!</p>';
+                    return;
+                }
+
+                scores.forEach((score, index) => {
+                    const rank = index + 1;
+                    const rankColor = rank === 1 ? 'text-amber-500 font-bold' : (rank === 2 ? 'text-gray-400 font-semibold' : (rank === 3 ? 'text-yellow-600 font-medium' : 'text-gray-700'));
+                    
+                    leaderboardList.innerHTML += `
+                        <div class="flex justify-between items-center p-2 rounded-lg ${score.userId === userId ? 'bg-blue-50 border-blue-200 border-2' : 'bg-gray-50'}">
+                            <span class="${rankColor} w-6">${rank}.</span>
+                            <span class="flex-grow font-medium">${score.name}</span>
+                            <span class="font-black text-lg text-blue-800">${score.score}</span>
+                        </div>
+                    `;
+                });
+            }
+        }
+        
+        window.game = new Game();
+        window.game.init();
+
+    </script>
+</body>
+</html>
