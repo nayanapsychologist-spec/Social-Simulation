@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hero's Legacy Quest</title>
+    <!-- Load Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for aesthetic appeal and focus */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+            border: 4px solid #065f46; /* Deep Green Border */
+        }
+        .header {
+            background: linear-gradient(135deg, #065f46 0%, #10b981 100%); /* Green Gradient */
+        }
+        .question-card {
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        .btn-answer {
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn-answer:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            filter: brightness(110%);
+        }
+        /* Style for correct and incorrect feedback */
+        .correct {
+            background-color: #34d399 !important; /* Lighter Green */
+            color: white !important;
+            border-color: #059669 !important;
+        }
+        .incorrect {
+            background-color: #f87171 !important; /* Lighter Red */
+            color: white !important;
+            border-color: #dc2626 !important;
+        }
+        .hint-box {
+            background-color: #fef3c7; /* Yellow 100 */
+            border-left: 6px solid #f59e0b; /* Yellow 500 */
+        }
+        .level-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            box-shadow: inset 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header p-6 text-white text-center">
+        <h1 class="text-3xl font-extrabold tracking-wider">The Hero's Legacy Quest 🇮🇳</h1>
+        <p class="text-lg opacity-90 mt-1">Journey through the lives of Great People of the World.</p>
+    </div>
+
+    <div class="p-8">
+        <!-- Quiz Area -->
+        <div id="quiz-area">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-3 sm:space-y-0">
+                <div class="text-lg font-semibold text-gray-700">Level: <span id="level-name" class="level-badge text-green-700">Loading...</span></div>
+                <div class="text-xl font-semibold text-gray-700">Question <span id="current-q">1</span> of <span id="total-q"></span></div>
+                <div class="text-xl font-semibold text-gray-700">Score: <span id="score" class="text-green-600 font-bold">0</span></div>
+            </div>
+
+            <div class="question-card p-6 bg-gray-50 rounded-xl">
+                <p id="question-text" class="text-2xl font-medium text-gray-800 mb-6 leading-relaxed">Loading quest data...</p>
+
+                <!-- Hint Box (Initially hidden) -->
+                <div id="hint-box" class="hint-box p-4 mt-4 mb-4 rounded-lg hidden">
+                    <p class="font-bold text-yellow-800">Scaffolding Hint (Use your PDF!):</p>
+                    <p id="hint-text" class="text-yellow-700 italic"></p>
+                </div>
+
+                <!-- Answer Choices -->
+                <div id="choices-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Buttons will be injected here by JavaScript -->
+                </div>
+
+                <!-- Feedback Message -->
+                <p id="feedback-message" class="text-center mt-6 text-lg font-bold hidden"></p>
+            </div>
+        </div>
+
+        <!-- Result Area (Initially hidden) -->
+        <div id="result-area" class="hidden text-center p-8">
+            <h2 class="text-4xl font-extrabold text-green-600 mb-4">Legacy Quest Complete! 🏆</h2>
+            <p class="text-2xl text-gray-700 mb-6">Your final score is: <span id="final-score" class="font-bold text-3xl text-red-500"></span> / <span id="max-score" class="font-bold text-3xl"></span></p>
+            <p class="text-gray-600 mb-8">You successfully discovered the legacies of these world-changing heroes!</p>
+            <button onclick="resetGame()" class="px-8 py-3 bg-green-600 text-white font-bold rounded-full hover:bg-green-700 transition duration-300 shadow-lg transform hover:scale-105">Start New Quest</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- QUIZ DATA STRUCTURE ---
+    // The lesson is broken into levels based on the previous conversation and PDF content.
+    const quizLevels = [
+        {
+            name: "Level 1: Indian Icons",
+            questions: [
+                {
+                    q: "Who is the Indian scientist nicknamed the 'Missile Man of India'?",
+                    choices: ["B.R. Ambedkar", "A.P.J. Abdul Kalam", "Jawaharlal Nehru", "Sunderlal Bahuguna"],
+                    answer: "A.P.J. Abdul Kalam",
+                    hint: "He wrote the quote, 'Dream is not that which you see while sleeping...' and led India's missile programmes."
+                },
+                {
+                    q: "Which visionary leader played the lead role in framing the Indian Constitution and fought against discrimination?",
+                    choices: ["Mahatma Gandhi", "Nelson Mandela", "B.R. Ambedkar", "Abraham Lincoln"],
+                    answer: "B.R. Ambedkar",
+                    hint: "Find the person who became the first Law Minister of independent India."
+                },
+                {
+                    q: "Who was the main leader of the **Chipko Movement** in the Himalayas, where activists chained themselves to trees?",
+                    choices: ["Wangari Maathai", "Sunderlal Bahuguna", "Kailash Satyarthi", "Thomas Edison"],
+                    answer: "Sunderlal Bahuguna",
+                    hint: "The movement's name means 'to hug'. This Indian environmentalist grew up among tall trees."
+                },
+                {
+                    q: "Which Nobel Peace Prize winner ran the **Bachpan Bachao Andolan** (Save Childhood Movement) against child labour?",
+                    choices: ["Nelson Mandela", "Malala Yousafzai", "Kailash Satyarthi", "Wangari Maathai"],
+                    answer: "Kailash Satyarthi",
+                    hint: "He was awarded the prize along with Malala Yousafzai in 2014."
+                },
+            ]
+        },
+        {
+            name: "Level 2: Global Champions",
+            questions: [
+                {
+                    q: "Which South African leader fought against the system of **Apartheid** (racial inequality)?",
+                    choices: ["Abraham Lincoln", "Nelson Mandela", "Martin Luther King Jr.", "B.R. Ambedkar"],
+                    answer: "Nelson Mandela",
+                    hint: "He once said, 'The greatest glory in living lies not in never falling, but in rising every time we fall.'"
+                },
+                {
+                    q: "Who was the US President who worked hard to end **slavery** and talked about freedom in the Gettysburg Address?",
+                    choices: ["George Washington", "Thomas Edison", "Abraham Lincoln", "Thomas Jefferson"],
+                    answer: "Abraham Lincoln",
+                    hint: "He is quoted as saying: 'When I do good I feel good, when I do bad I feel bad, and that's my religion.'"
+                },
+                {
+                    q: "This Kenyan environment activist founded the **'Green Belt Movement'** and planted around 30 million trees.",
+                    choices: ["Sunderlal Bahuguna", "Wangari Maathai", "Rachel Carson", "Vandana Shiva"],
+                    answer: "Wangari Maathai",
+                    hint: "She received the Nobel Peace Prize in 2004 for sustainable development, democracy and peace."
+                },
+            ]
+        },
+        {
+            name: "Level 3: Legacy Math & Science",
+            questions: [
+                {
+                    q: "Thomas Edison was born in 1847 and died in 1931. How many years was he alive? (A simple math puzzle!)",
+                    choices: ["74 years", "84 years", "94 years", "104 years"],
+                    answer: "84 years", // 1931 - 1847 = 84
+                    hint: "Do the subtraction: 1931 minus 1847. (You can round 1847 up to 1850 for a quick estimate: 1931-1850 = 81, so the answer is close to that!)"
+                },
+                {
+                    q: "Wangari Maathai won the Nobel Peace Prize in 2004. Nelson Mandela won his 11 years earlier. What year did Mandela win?",
+                    choices: ["1993", "1995", "1988", "1998"],
+                    answer: "1993", // 2004 - 11 = 1993
+                    hint: "Subtract 11 from 2004. (The year is in the 1990s!)"
+                },
+                {
+                    q: "Thomas Edison is credited with which major invention, mentioned in the text?",
+                    choices: ["The first automobile", "The printing press", "The light bulb", "The television"],
+                    answer: "The light bulb",
+                    hint: "He introduced the common usage of electricity and his invention helps you read at night."
+                },
+            ]
+        }
+    ];
+
+    let currentLevelIndex = 0;
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let attempts = 0; // Tracks attempts for scaffolding
+    let totalQuestions = quizLevels.reduce((acc, level) => acc + level.questions.length, 0);
+
+    // --- DOM Elements ---
+    const quizArea = document.getElementById('quiz-area');
+    const resultArea = document.getElementById('result-area');
+    const questionText = document.getElementById('question-text');
+    const choicesContainer = document.getElementById('choices-container');
+    const currentQSpan = document.getElementById('current-q');
+    const totalQSpan = document.getElementById('total-q');
+    const scoreSpan = document.getElementById('score');
+    const hintBox = document.getElementById('hint-box');
+    const hintText = document.getElementById('hint-text');
+    const feedbackMessage = document.getElementById('feedback-message');
+    const levelNameSpan = document.getElementById('level-name');
+
+    // Set the total number of questions on load
+    totalQSpan.textContent = totalQuestions;
+
+    // Function to load the current question
+    function loadQuestion() {
+        const currentLevel = quizLevels[currentLevelIndex];
+        const qData = currentLevel.questions[currentQuestionIndex];
+
+        // Reset state
+        choicesContainer.innerHTML = '';
+        hintBox.classList.add('hidden');
+        feedbackMessage.classList.add('hidden');
+        attempts = 0;
+
+        // Update UI elements
+        const overallQuestionNumber = quizLevels.slice(0, currentLevelIndex).reduce((acc, level) => acc + level.questions.length, 0) + currentQuestionIndex + 1;
+        currentQSpan.textContent = overallQuestionNumber;
+        levelNameSpan.textContent = currentLevel.name;
+        questionText.textContent = qData.q;
+
+        // Create choice buttons
+        qData.choices.forEach(choice => {
+            const button = document.createElement('button');
+            button.textContent = choice;
+            button.className = 'btn-answer px-4 py-3 text-lg font-bold bg-green-500 text-white rounded-xl shadow-md hover:bg-green-600 transition duration-150';
+            button.onclick = () => checkAnswer(choice, qData.answer, qData.hint);
+            choicesContainer.appendChild(button);
+        });
+    }
+
+    // Function to check the selected answer
+    function checkAnswer(selectedChoice, correctAnswer, hint) {
+        const buttons = choicesContainer.querySelectorAll('button');
+
+        // Disable all buttons immediately to prevent multiple clicks
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selectedChoice === correctAnswer) {
+            // Correct Answer Logic
+            if (attempts === 0) {
+                // Only award points on the first, correct attempt
+                score++;
+                scoreSpan.textContent = score;
+            }
+
+            // Highlight the correct button
+            buttons.forEach(btn => {
+                if (btn.textContent === selectedChoice) {
+                    btn.classList.add('correct');
+                    btn.classList.remove('bg-green-500');
+                }
+            });
+
+            feedbackMessage.textContent = "✅ Correct! Great job, Scholar.";
+            feedbackMessage.classList.remove('hidden', 'text-red-500');
+            feedbackMessage.classList.add('text-green-600');
+
+            // Move to next question after a brief delay
+            setTimeout(nextStep, 1500);
+
+        } else {
+            // Incorrect Answer Logic (Scaffolding)
+            attempts++;
+
+            // Highlight incorrect button in red
+            buttons.forEach(btn => {
+                if (btn.textContent === selectedChoice) {
+                    btn.classList.add('incorrect');
+                    btn.classList.remove('bg-green-500');
+                }
+            });
+
+            feedbackMessage.textContent = "❌ Not quite! Let's use the hint to guide our research.";
+            feedbackMessage.classList.remove('hidden', 'text-green-600');
+            feedbackMessage.classList.add('text-red-500');
+
+            // Show the scaffolding hint
+            hintText.textContent = hint;
+            hintBox.classList.remove('hidden');
+
+            // Re-enable all buttons except the incorrect one after a delay
+            setTimeout(() => {
+                buttons.forEach(btn => {
+                    // Only re-enable if it's not the already selected (incorrect) answer
+                    if (btn.textContent !== selectedChoice) {
+                        btn.disabled = false;
+                        btn.classList.remove('incorrect'); // Clean up any previous attempt highlight
+                        btn.classList.add('bg-green-500');
+                    }
+                });
+            }, 1000); // Wait 1 second before re-enabling others
+        }
+    }
+
+    // Handles moving to the next question or level
+    function nextStep() {
+        currentQuestionIndex++;
+        const currentLevel = quizLevels[currentLevelIndex];
+
+        if (currentQuestionIndex < currentLevel.questions.length) {
+            // Still questions left in the current level
+            loadQuestion();
+        } else if (currentLevelIndex < quizLevels.length - 1) {
+            // Move to the next level
+            currentLevelIndex++;
+            currentQuestionIndex = 0;
+            // Provide a small transition message before loading the next level
+            feedbackMessage.textContent = `🎉 Level Cleared! Starting ${quizLevels[currentLevelIndex].name}...`;
+            feedbackMessage.classList.remove('hidden');
+            setTimeout(loadQuestion, 1500);
+        } else {
+            // All levels complete
+            showResults();
+        }
+    }
+
+
+    // Function to show the final results
+    function showResults() {
+        quizArea.classList.add('hidden');
+        resultArea.classList.remove('hidden');
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('max-score').textContent = totalQuestions;
+    }
+
+    // Function to restart the game
+    function resetGame() {
+        currentLevelIndex = 0;
+        currentQuestionIndex = 0;
+        score = 0;
+        attempts = 0;
+        scoreSpan.textContent = score;
+        quizArea.classList.remove('hidden');
+        resultArea.classList.add('hidden');
+        loadQuestion();
+    }
+
+    // Start the game when the window loads
+    window.onload = resetGame;
+
+</script>
+</body>
+</html>
