@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conservation Challenge Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Custom Styles */
+        body {
+            background-color: #e0f2f1; /* Light Cyan Background */
+            font-family: 'Fredoka', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 77, 64, 0.2);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .draggable {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .draggable:active {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .dropzone {
+            min-height: 120px;
+            border: 3px dashed #4db6ac;
+            background-color: #f7fcfc;
+            transition: background-color 0.3s;
+        }
+
+        .dropzone.drag-over {
+            background-color: #b2dfdb; /* Light Teal when dragging over */
+            border-color: #00897b;
+        }
+
+        .correct-drop {
+            background-color: #c8e6c9 !important; /* Light Green on correct drop */
+            border-color: #388e3c !important;
+        }
+
+        .dropzone-title {
+            color: #00796b;
+            font-weight: 700;
+        }
+
+        .game-title {
+            color: #004d40;
+            text-shadow: 1px 1px 0px #b2dfdb;
+        }
+
+        .menu-button {
+            transition: transform 0.1s;
+        }
+
+        .menu-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Utility for centering text in the drag items */
+        .drag-item-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+        }
+    </style>
+</head>
+<body onload="initializeGame()">
+
+<div class="game-container">
+    <h1 class="text-4xl lg:text-5xl font-extrabold mb-8 game-title text-center">
+        🌎 The Conservation Challenge! 🌿
+    </h1>
+
+    <!-- Message Box / Overlay -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl p-8 shadow-2xl max-w-sm w-full text-center">
+            <h3 id="message-title" class="text-3xl font-bold mb-4 text-green-700">Well Done!</h3>
+            <p id="message-text" class="mb-6 text-gray-700">You completed the challenge!</p>
+            <button id="message-button" onclick="hideMessage(); resetGame();" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md">
+                Continue to Menu
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="space-y-6">
+        <p class="text-center text-xl text-gray-600">Choose a game to start your Conservation Challenge:</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <button onclick="startGame(1)" class="menu-button bg-teal-500 hover:bg-teal-600 text-white p-6 rounded-xl text-2xl font-bold shadow-lg flex flex-col items-center">
+                <i class="fas fa-smog text-4xl mb-2"></i>
+                Pollutant Impact
+            </button>
+            <button onclick="startGame(2)" class="menu-button bg-yellow-500 hover:bg-yellow-600 text-white p-6 rounded-xl text-2xl font-bold shadow-lg flex flex-col items-center">
+                <i class="fas fa-seedling text-4xl mb-2"></i>
+                Waste Classification
+            </button>
+            <button onclick="startGame(3)" class="menu-button bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-2xl font-bold shadow-lg flex flex-col items-center">
+                <i class="fas fa-recycle text-4xl mb-2"></i>
+                The Four R's
+            </button>
+            <button onclick="startGame(4)" class="menu-button bg-red-500 hover:bg-red-600 text-white p-6 rounded-xl text-2xl font-bold shadow-lg flex flex-col items-center">
+                <i class="fas fa-chart-line text-4xl mb-2"></i>
+                Action Impact
+            </button>
+        </div>
+    </div>
+
+    <!-- Game 1: Pollutants and their effect -->
+    <div id="game-1" class="hidden">
+        <h2 class="text-3xl font-bold mb-6 text-center text-teal-700">Game 1: Pollutants & Their Impact</h2>
+        <p class="text-center mb-6 text-gray-600">Drag each pollutant to the environment it affects.</p>
+
+        <div id="drag-items-1" class="flex flex-wrap justify-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg mb-8 bg-gray-50 min-h-[150px]">
+            <!-- Draggable items will be populated here -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div id="air-dropzone" data-category="air" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-cloud text-blue-500"></i> Air</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="water-dropzone" data-category="water" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-tint text-blue-600"></i> Water</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="land-dropzone" data-category="land" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-tree text-green-700"></i> Land/Soil</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="sound-dropzone" data-category="sound" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-volume-up text-red-500"></i> Sound</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+        </div>
+        <button onclick="checkGame(1)" class="mt-8 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg w-full transition duration-200 shadow-md">Check Progress</button>
+        <button onclick="resetGame()" class="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full transition duration-200 shadow-sm">Back to Menu</button>
+    </div>
+
+    <!-- Game 2: Biodegradable vs Non-Biodegradable -->
+    <div id="game-2" class="hidden">
+        <h2 class="text-3xl font-bold mb-6 text-center text-yellow-700">Game 2: Waste Classification</h2>
+        <p class="text-center mb-6 text-gray-600">Drag each item into the correct waste category.</p>
+
+        <div id="drag-items-2" class="flex flex-wrap justify-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg mb-8 bg-gray-50 min-h-[150px]">
+            <!-- Draggable items will be populated here -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="bio-dropzone" data-category="bio" class="dropzone p-4 rounded-lg text-center correct-drop">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-leaf text-green-600"></i> Biodegradable (Rots)</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="nonbio-dropzone" data-category="nonbio" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-flask text-red-600"></i> Non-Biodegradable (Stays)</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+        </div>
+        <button onclick="checkGame(2)" class="mt-8 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg w-full transition duration-200 shadow-md">Check Progress</button>
+        <button onclick="resetGame()" class="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full transition duration-200 shadow-sm">Back to Menu</button>
+    </div>
+
+    <!-- Game 3: The Four R's -->
+    <div id="game-3" class="hidden">
+        <h2 class="text-3xl font-bold mb-6 text-center text-orange-700">Game 3: The Four R's</h2>
+        <p class="text-center mb-6 text-gray-600">Drag each item/action to the best "R" it represents.</p>
+
+        <div id="drag-items-3" class="flex flex-wrap justify-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg mb-8 bg-gray-50 min-h-[150px]">
+            <!-- Draggable items will be populated here -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div id="refuse-dropzone" data-category="refuse" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-hand-stop text-red-500"></i> Refuse</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="reduce-dropzone" data-category="reduce" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-minus-circle text-blue-500"></i> Reduce</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="reuse-dropzone" data-category="reuse" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-redo-alt text-green-500"></i> Reuse</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="recycle-dropzone" data-category="recycle" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-recycle text-orange-500"></i> Recycle</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+        </div>
+        <button onclick="checkGame(3)" class="mt-8 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg w-full transition duration-200 shadow-md">Check Progress</button>
+        <button onclick="resetGame()" class="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full transition duration-200 shadow-sm">Back to Menu</button>
+    </div>
+    
+    <!-- Game 4: Action Impact -->
+    <div id="game-4" class="hidden">
+        <h2 class="text-3xl font-bold mb-6 text-center text-red-700">Game 4: Action Impact</h2>
+        <p class="text-center mb-6 text-gray-600">Drag each action to show whether it reduces or increases pollution.</p>
+
+        <div id="drag-items-4" class="flex flex-wrap justify-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg mb-8 bg-gray-50 min-h-[150px]">
+            <!-- Draggable items will be populated here -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="reduce-poll-dropzone" data-category="reduce-poll" class="dropzone p-4 rounded-lg text-center correct-drop">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-thumbs-up text-green-600"></i> Reduces Pollution</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+            <div id="increase-poll-dropzone" data-category="increase-poll" class="dropzone p-4 rounded-lg text-center">
+                <p class="dropzone-title text-xl mb-2"><i class="fas fa-thumbs-down text-red-600"></i> Increases Pollution</p>
+                <div class="flex flex-wrap gap-2 justify-center"></div>
+            </div>
+        </div>
+        <button onclick="checkGame(4)" class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg w-full transition duration-200 shadow-md">Check Progress</button>
+        <button onclick="resetGame()" class="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full transition duration-200 shadow-sm">Back to Menu</button>
+    </div>
+
+</div>
+
+<script>
+    let currentGame = 0;
+    let allGamesData = {};
+
+    // --- GAME DATA SETUP ---
+
+    // Game 1: Pollutants and what they affect (air, water, land, sound)
+    allGamesData[1] = {
+        title: "Pollutants & Their Impact",
+        dragItems: [
+            { id: "p1", icon: "fas fa-smog", text: "Factory Smoke", category: "air", color: "blue" },
+            { id: "p2", icon: "fas fa-car", text: "Car Horn Blare", category: "sound", color: "red" },
+            { id: "p3", icon: "fas fa-flask", text: "Chemical Waste", category: "water", color: "blue-600" },
+            { id: "p4", icon: "fas fa-microphone", text: "Loud Music", category: "sound", color: "red" },
+            { id: "p5", icon: "fas fa-tire", text: "Old Tires", category: "land", color: "green-700" },
+            { id: "p6", icon: "fas fa-trash-alt", text: "Plastic Bags", category: "land", color: "green-700" },
+            { id: "p7", icon: "fas fa-dumpster-fire", text: "Burning Garbage", category: "air", color: "blue" },
+            { id: "p8", icon: "fas fa-toilet", text: "Untreated Sewage", category: "water", color: "blue-600" },
+            { id: "p9", icon: "fas fa-tractor", text: "Farm Pesticides", category: "land", color: "green-700" },
+            { id: "p10", icon: "fas fa-plane", text: "Jet Engine Noise", category: "sound", color: "red" },
+            { id: "p11", icon: "fas fa-engine-smoke", text: "Vehicle Exhaust", category: "air", color: "blue" },
+            { id: "p12", icon: "fas fa-oil-can", text: "Oil Spills", category: "water", color: "blue-600" },
+            { id: "p13", icon: "fas fa-construction", text: "Jackhammer", category: "sound", color: "red" },
+            { id: "p14", icon: "fas fa-microchip", text: "E-Waste (Phones)", category: "land", color: "green-700" },
+            { id: "p15", icon: "fas fa-spray-can", text: "Aerosol Spray", category: "air", color: "blue" },
+        ],
+        dropZones: ["air-dropzone", "water-dropzone", "land-dropzone", "sound-dropzone"]
+    };
+
+    // Game 2: Biodegradable vs Non-Biodegradable (NEUTRALIZED COLORS)
+    allGamesData[2] = {
+        title: "Waste Classification",
+        dragItems: [
+            // Biodegradable items
+            { id: "w1", icon: "fas fa-apple-alt", text: "Apple Core", category: "bio", color: "gray-700" },
+            { id: "w2", icon: "fas fa-newspaper", text: "Newspaper", category: "bio", color: "gray-700" },
+            { id: "w5", icon: "fas fa-carrot", text: "Vegetable Peel", category: "bio", color: "gray-700" },
+            { id: "w6", icon: "fas fa-box", text: "Cardboard Box", category: "bio", color: "gray-700" },
+            { id: "w7", icon: "fas fa-tshirt", text: "Old Cotton Cloth", category: "bio", color: "gray-700" },
+            { id: "w9", icon: "fas fa-cookie-bite", text: "Leftover Food", category: "bio", color: "gray-700" },
+            // Non-Biodegradable items
+            { id: "w3", icon: "fas fa-wine-bottle", text: "Glass Bottle", category: "nonbio", color: "gray-700" },
+            { id: "w4", icon: "fas fa-utensils", text: "Plastic Spoon", category: "nonbio", color: "gray-700" },
+            { id: "w8", icon: "fas fa-battery-half", text: "Used Battery", category: "nonbio", color: "gray-700" },
+            { id: "w10", icon: "fas fa-prescription-bottle-alt", text: "Medicine Bottle", category: "nonbio", color: "gray-700" },
+        ],
+        dropZones: ["bio-dropzone", "nonbio-dropzone"]
+    };
+
+    // Game 3: The Four R's (Refuse, Reduce, Reuse, Recycle)
+    allGamesData[3] = {
+        title: "The Four R's",
+        dragItems: [
+            { id: "r1", icon: "fas fa-shopping-bag", text: "Use Cloth Bags", category: "refuse", color: "red" },
+            { id: "r2", icon: "fas fa-lightbulb", text: "Save Electricity", category: "reduce", color: "blue" },
+            { id: "r3", icon: "fas fa-spray-can", text: "Avoid Aerosols", category: "refuse", color: "red" },
+            { id: "r4", icon: "fas fa-envelope-open-text", text: "Read E-books", category: "reduce", color: "blue" },
+            { id: "r5", icon: "fas fa-jar", text: "Store Water in Jars", category: "reuse", color: "green" },
+            { id: "r6", icon: "fas fa-paperclip", text: "Make Art from Trash", category: "reuse", color: "green" },
+            { id: "r7", icon: "fas fa-car", text: "Carpooling", category: "reduce", color: "blue" },
+            { id: "r8", icon: "fas fa-box-open", text: "Paper Collection", category: "recycle", color: "orange" },
+            { id: "r9", icon: "fas fa-utensils-alt", text: "Use Metal Straws", category: "refuse", color: "red" },
+            { id: "r10", icon: "fas fa-paint-roller", text: "Old Clothes as Rags", category: "reuse", color: "green" },
+            { id: "r11", icon: "fas fa-laptop-code", text: "Recycle Electronics", category: "recycle", color: "orange" },
+            { id: "r12", icon: "fas fa-envelope-square", text: "Cancel Junk Mail", category: "refuse", color: "red" },
+            { id: "r13", icon: "fas fa-battery-full", text: "Use Rechargeable Batteries", category: "reduce", color: "blue" },
+            { id: "r14", icon: "fas fa-can", text: "Melt Aluminum Cans", category: "recycle", color: "orange" },
+            { id: "r15", icon: "fas fa-wine-glass-alt", text: "Glass into Sand", category: "recycle", color: "orange" },
+        ],
+        dropZones: ["refuse-dropzone", "reduce-dropzone", "reuse-dropzone", "recycle-dropzone"]
+    };
+    
+    // Game 4: Actions (Reduce vs Increase Pollution)
+    allGamesData[4] = {
+        title: "Action Impact",
+        dragItems: [
+            { id: "a1", icon: "fas fa-tree", text: "Planting a Tree", category: "reduce-poll", color: "green" },
+            { id: "a2", icon: "fas fa-campground", text: "Burning Leaves", category: "increase-poll", color: "red" },
+            { id: "a3", icon: "fas fa-bicycle", text: "Riding a Bike", category: "reduce-poll", color: "green" },
+            { id: "a4", icon: "fas fa-globe-europe", text: "Ignoring Waste", category: "increase-poll", color: "red" },
+            { id: "a5", icon: "fas fa-faucet", text: "Fixing a Leak", category: "reduce-poll", color: "green" },
+            { id: "a6", icon: "fas fa-car-crash", text: "Driving all the time", category: "increase-poll", color: "red" },
+            { id: "a7", icon: "fas fa-hand-holding-water", text: "Wasting Water", category: "increase-poll", color: "red" },
+            { id: "a8", icon: "fas fa-wind", text: "Using Wind Power", category: "reduce-poll", color: "green" },
+            { id: "a9", icon: "fas fa-sign-in-alt", text: "Littering", category: "increase-poll", color: "red" },
+            { id: "a10", icon: "fas fa-power-off", text: "Turning off Lights", category: "reduce-poll", color: "green" },
+        ],
+        dropZones: ["reduce-poll-dropzone", "increase-poll-dropzone"]
+    };
+
+    // --- GAME LOGIC ---
+
+    function initializeGame() {
+        // Attach drag/drop handlers to all drop zones for all games
+        for (const gameId in allGamesData) {
+            const game = allGamesData[gameId];
+            game.dropZones.forEach(zoneId => {
+                const dropzone = document.getElementById(zoneId);
+                if (dropzone) {
+                    dropzone.addEventListener('dragover', dragOver);
+                    dropzone.addEventListener('dragleave', dragLeave);
+                    dropzone.addEventListener('drop', drop);
+                }
+            });
+        }
+    }
+
+    function createDragItem(item, gameId) {
+        const div = document.createElement('div');
+        div.id = item.id;
+        div.classList.add('draggable', 'p-3', 'rounded-lg', 'bg-white', 'text-gray-800', 'text-sm', 'w-[100px]', 'h-[100px]');
+        div.setAttribute('draggable', true);
+        div.setAttribute('data-category', item.category);
+        div.setAttribute('data-game', gameId);
+        
+        // Use custom class for color for Game 2 to avoid direct color leak
+        const iconColorClass = gameId === 2 ? `text-gray-600` : `text-${item.color}-600`;
+
+        div.innerHTML = `
+            <div class="drag-item-content">
+                <i class="${item.icon} text-3xl ${iconColorClass} mb-1"></i>
+                <span class="text-xs font-semibold leading-tight">${item.text}</span>
+            </div>
+        `;
+        div.addEventListener('dragstart', dragStart);
+        return div;
+    }
+
+    function populateDragItems(gameId) {
+        const game = allGamesData[gameId];
+        const dragContainer = document.getElementById(`drag-items-${gameId}`);
+        dragContainer.innerHTML = ''; // Clear previous items
+
+        // Reset all drop zones before repopulating the drag area
+        game.dropZones.forEach(zoneId => {
+            const dropzone = document.getElementById(zoneId);
+            dropzone.classList.remove('correct-drop');
+            const items = Array.from(dropzone.querySelector('div').querySelectorAll('.draggable'));
+            items.forEach(item => {
+                dragContainer.appendChild(item); // Move items back
+            });
+        });
+
+        // Shuffle the items for variety
+        const shuffledItems = Array.from(dragContainer.children).sort(() => Math.random() - 0.5);
+        dragContainer.innerHTML = ''; // Clear the container again
+        shuffledItems.forEach(item => dragContainer.appendChild(item));
+        
+        // If the game was just started, ensure all original items are created
+        if (dragContainer.children.length === 0) {
+            const initialItems = game.dragItems.sort(() => Math.random() - 0.5);
+            initialItems.forEach(item => {
+                dragContainer.appendChild(createDragItem(item, gameId));
+            });
+        }
+    }
+
+    function startGame(gameId) {
+        currentGame = gameId;
+        document.getElementById('main-menu').classList.add('hidden');
+
+        // Hide all game screens
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`game-${i}`).classList.add('hidden');
+        }
+
+        // Show the selected game screen
+        document.getElementById(`game-${gameId}`).classList.remove('hidden');
+
+        // Populate items (this also resets the drop zones)
+        populateDragItems(gameId);
+    }
+
+    function resetGame() {
+        currentGame = 0;
+        document.getElementById('main-menu').classList.remove('hidden');
+        for (let i = 1; i <= 4; i++) {
+            const gameElement = document.getElementById(`game-${i}`);
+            if (gameElement) {
+                gameElement.classList.add('hidden');
+            }
+        }
+    }
+
+    // --- DRAG AND DROP HANDLERS ---
+
+    function dragStart(e) {
+        e.dataTransfer.setData('text/plain', e.target.id);
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function dragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function dragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function drop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+
+        const id = e.dataTransfer.getData('text/plain');
+        const draggableElement = document.getElementById(id);
+        const dropzone = e.currentTarget;
+        
+        // Only allow dropping into the inner container of the dropzone
+        const dropContainer = dropzone.querySelector('div');
+
+        // Append the draggable item to the dropzone's inner container
+        dropContainer.appendChild(draggableElement);
+    }
+
+    // --- GAME CHECKING (WITH SCAFFOLDING) ---
+
+    function checkGame(gameId) {
+        let allCorrect = true;
+        const game = allGamesData[gameId];
+        const dragContainer = document.getElementById(`drag-items-${gameId}`);
+        const misplacedItems = [];
+
+        // 1. Check if any items are still in the drag container (existing check)
+        if (dragContainer.querySelectorAll('.draggable').length > 0) {
+            showMessage("Almost There!", "You need to drag ALL the items into the zones first!", "bg-yellow-500", 'continue');
+            return;
+        }
+
+        game.dropZones.forEach(zoneId => {
+            const dropzone = document.getElementById(zoneId);
+            const items = Array.from(dropzone.querySelectorAll('.draggable'));
+            let zoneHasIncorrect = false;
+
+            items.forEach(item => {
+                const itemCategory = item.getAttribute('data-category');
+                const dropCategory = dropzone.getAttribute('data-category');
+                const itemData = game.dragItems.find(d => d.id === item.id);
+
+                if (itemCategory !== dropCategory) {
+                    allCorrect = false;
+                    zoneHasIncorrect = true;
+                    
+                    // Collect and move misplaced items back to the pool
+                    misplacedItems.push(itemData.text);
+                    // Move the item back to the drag container
+                    dragContainer.appendChild(item);
+                }
+            });
+
+            // Apply success styling only if all remaining items in the zone are correct
+            dropzone.classList.remove('correct-drop');
+            if (dropzone.querySelector('div').children.length > 0 && !zoneHasIncorrect) {
+                 dropzone.classList.add('correct-drop');
+            }
+        });
+
+        // 2. Provide Scaffolded Feedback
+        if (allCorrect) {
+            showMessage("Fantastic Work!", `You aced the ${game.title} challenge!`, "bg-green-600", 'reset');
+        } else {
+            let feedbackText = "You have some misplaced items. The following items were incorrect and have been moved back to the top area for you to try again: <br><br>";
+            if (misplacedItems.length > 0) {
+                feedbackText += `<strong>${misplacedItems.join(', ')}</strong>.`;
+            } else {
+                 // Fallback if an item was left behind (e.g., in a wrong dropzone, but we didn't track it)
+                 feedbackText += "Please try rearranging the items that are currently in the wrong drop zones.";
+            }
+            
+            showMessage("Keep Trying! Focused Feedback:", feedbackText, "bg-red-500", 'continue');
+        }
+    }
+
+    // --- MESSAGE BOX ---
+
+    function showMessage(title, text, colorClass, buttonAction = 'reset') {
+        const box = document.getElementById('message-box');
+        const titleElement = document.getElementById('message-title');
+        const textElement = document.getElementById('message-text');
+        const button = document.getElementById('message-button'); 
+
+        titleElement.textContent = title;
+        titleElement.className = `text-3xl font-bold mb-4 ${colorClass.replace('bg-', 'text-')}`;
+        textElement.innerHTML = text; // Use innerHTML for rich text/strong tags
+
+        // Configure Button Style
+        button.className = `${colorClass} hover:bg-${colorClass.split('-')[1]}-${parseInt(colorClass.split('-')[2]) + 100} text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-md`;
+        
+        // Configure Button Action and Text
+        if (buttonAction === 'reset') {
+            button.textContent = "Continue to Menu";
+            button.onclick = () => { hideMessage(); resetGame(); };
+        } else { // buttonAction === 'continue' (Used for error/scaffolding)
+            button.textContent = "Continue Game";
+            button.onclick = () => { hideMessage(); };
+        }
+
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+    }
+
+    function hideMessage() {
+        document.getElementById('message-box').classList.remove('flex');
+        document.getElementById('message-box').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>
