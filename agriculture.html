@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroMaster India - Interactive Crop Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f0fdf4;
+            overflow-x: hidden;
+        }
+
+        .drop-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed #4ade80;
+            min-height: 200px;
+        }
+
+        .drop-zone.active {
+            background-color: #dcfce7;
+            transform: scale(1.02);
+            border-style: solid;
+        }
+
+        .crop-card {
+            cursor: grab;
+            transition: transform 0.2s;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .crop-card:active {
+            cursor: grabbing;
+        }
+
+        .state-path {
+            fill: #e2e8f0;
+            stroke: #64748b;
+            stroke-width: 1.5;
+            transition: fill 0.3s, stroke-width 0.2s;
+        }
+
+        .state-path.target:hover {
+            fill: #cbd5e1;
+            stroke-width: 2.5;
+        }
+
+        .state-path.correct {
+            fill: #4ade80 !important;
+            stroke: #166534;
+        }
+
+        .modal {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+
+        svg {
+            max-width: 100%;
+            max-height: 100%;
+            filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04));
+        }
+        
+        #workspace {
+            min-height: 500px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="max-w-4xl w-full text-center bg-white p-8 rounded-3xl shadow-2xl border-4 border-green-500">
+        <h1 class="text-5xl font-extrabold text-green-700 mb-4">AgroMaster India 🌾</h1>
+        <p class="text-gray-600 mb-8 text-lg">Drag the crops to their correct categories or states to win!</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button onclick="startLevel(1)" class="p-6 bg-green-100 hover:bg-green-200 rounded-2xl border-2 border-green-500 transition shadow-md group">
+                <div class="text-4xl mb-2 group-hover:scale-110 transition">⚖️</div>
+                <div class="font-bold">Level 1</div>
+                <div class="text-xs">Classification</div>
+            </button>
+            <button onclick="startLevel(2)" class="p-6 bg-yellow-100 hover:bg-yellow-200 rounded-2xl border-2 border-yellow-500 transition shadow-md group">
+                <div class="text-4xl mb-2 group-hover:scale-110 transition">🍚</div>
+                <div class="font-bold">Level 2</div>
+                <div class="text-xs">Food Crops Map</div>
+            </button>
+            <button onclick="startLevel(3)" class="p-6 bg-blue-100 hover:bg-blue-200 rounded-2xl border-2 border-blue-500 transition shadow-md group">
+                <div class="text-4xl mb-2 group-hover:scale-110 transition">💰</div>
+                <div class="font-bold">Level 3</div>
+                <div class="text-xs">Cash Crops Map</div>
+            </button>
+            <button onclick="startLevel(4)" class="p-6 bg-red-100 hover:bg-red-200 rounded-2xl border-2 border-red-500 transition shadow-md group">
+                <div class="text-4xl mb-2 group-hover:scale-110 transition">🍎</div>
+                <div class="font-bold">Level 4</div>
+                <div class="text-xs">Horticulture</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" class="hidden w-full max-w-6xl flex flex-col gap-4">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-md border-b-4 border-green-600">
+            <button onclick="showWelcome()" class="px-6 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-bold transition">← Back</button>
+            <h2 id="level-title" class="text-2xl font-bold text-green-800 uppercase tracking-wide">Level 1</h2>
+            <div id="score-display" class="font-bold text-xl bg-green-50 px-4 py-1 rounded-full border border-green-200">Score: <span id="score" class="text-green-600">0</span></div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Sidebar for Draggables -->
+            <div id="sidebar" class="w-full lg:w-72 bg-white p-4 rounded-2xl shadow-inner flex lg:flex-col flex-row flex-wrap gap-4 items-center justify-start border-2 border-green-100 min-h-[150px] lg:min-h-[500px] overflow-y-auto">
+                <!-- Items injected here -->
+            </div>
+
+            <!-- Workspace -->
+            <div id="workspace" class="flex-grow bg-white rounded-2xl shadow-md p-6 flex items-center justify-center relative border-2 border-gray-50">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="msg-modal" class="modal fixed inset-0 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl scale-in transform transition-all">
+            <div id="modal-icon" class="text-6xl mb-4">✅</div>
+            <h3 id="modal-title" class="text-2xl font-bold mb-2">Great Job!</h3>
+            <p id="modal-text" class="text-gray-600 mb-6">You matched the crop correctly.</p>
+            <button onclick="closeModal()" class="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg transition">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        const gameData = {
+            1: {
+                title: "Crop Classification",
+                type: "sorting",
+                zones: [
+                    { id: "food", name: "Food Crops", desc: "Primarily for consumption" },
+                    { id: "cash", name: "Cash Crops", desc: "For commercial profit" }
+                ],
+                items: [
+                    { id: "rice", name: "Rice", category: "food", icon: "🌾" },
+                    { id: "wheat", name: "Wheat", category: "food", icon: "🍞" },
+                    { id: "pulses", name: "Pulses", category: "food", icon: "🍲" },
+                    { id: "cotton", name: "Cotton", category: "cash", icon: "☁️" },
+                    { id: "sugarcane", name: "Sugarcane", category: "cash", icon: "🍭" },
+                    { id: "jute", name: "Jute", category: "cash", icon: "🧵" },
+                    { id: "tea", name: "Tea", category: "cash", icon: "☕" },
+                    { id: "spices", name: "Spices", category: "cash", icon: "🌶️" }
+                ]
+            },
+            2: {
+                title: "Major Food Crops Map",
+                type: "map",
+                items: [
+                    { id: "rice_wb", name: "Rice", stateName: "West Bengal", stateId: "WB", icon: "🍚" },
+                    { id: "wheat_punjab", name: "Wheat", stateName: "Punjab", stateId: "PB", icon: "🥖" },
+                    { id: "millets_raj", name: "Millets", stateName: "Rajasthan", stateId: "RJ", icon: "🏜️" },
+                    { id: "pulses_mp", name: "Pulses", stateName: "M.P.", stateId: "MP", icon: "🥣" },
+                    { id: "jowar_mh", name: "Jowar", stateName: "Maharashtra", stateId: "MH", icon: "🌽" }
+                ]
+            },
+            3: {
+                title: "Cash Crops & Plantations",
+                type: "map",
+                items: [
+                    { id: "tea_assam", name: "Tea", stateName: "Assam", stateId: "AS", icon: "☕" },
+                    { id: "coffee_kar", name: "Coffee", stateName: "Karnataka", stateId: "KA", icon: "🍵" },
+                    { id: "cotton_guj", name: "Cotton", stateName: "Gujarat", stateId: "GJ", icon: "👕" },
+                    { id: "rubber_ker", name: "Rubber", stateName: "Kerala", stateId: "KL", icon: "👟" },
+                    { id: "sugarcane_up", name: "Sugarcane", stateName: "U.P.", stateId: "UP", icon: "🎋" },
+                    { id: "spices_ker", name: "Spices", stateName: "Kerala", stateId: "KL", icon: "🌶️" },
+                    { id: "mustard_punjab", name: "Mustard", stateName: "Punjab", stateId: "PB", icon: "🌼" }
+                ]
+            },
+            4: {
+                title: "Fruits & Horticulture",
+                type: "map",
+                items: [
+                    { id: "apple_jk", name: "Apple", stateName: "J&K", stateId: "JK", icon: "🍎" },
+                    { id: "mango_mh", name: "Mango", stateName: "Maharashtra", stateId: "MH", icon: "🥭" },
+                    { id: "saffron_jk", name: "Saffron", stateName: "J&K", stateId: "JK", icon: "🌸" },
+                    { id: "banana_tn", name: "Banana", stateName: "Tamil Nadu", stateId: "TN", icon: "🍌" },
+                    { id: "orange_mh", name: "Orange", stateName: "Maharashtra", stateId: "MH", icon: "🍊" },
+                    { id: "grapes_kar", name: "Grapes", stateName: "Karnataka", stateId: "KA", icon: "🍇" }
+                ]
+            }
+        };
+
+        const indiaPaths = `
+            <svg viewBox="0 0 500 600" preserveAspectRatio="xMidYMid meet">
+                <g class="states-group">
+                    <!-- J&K -->
+                    <path id="JK" d="M150,20 L220,20 L230,100 L140,110 Z" class="state-path target" />
+                    <text x="185" y="65" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">J&K</text>
+                    
+                    <!-- Punjab -->
+                    <path id="PB" d="M140,115 L180,115 L180,155 L130,155 Z" class="state-path target" />
+                    <text x="155" y="140" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">Punjab</text>
+
+                    <!-- Rajasthan -->
+                    <path id="RJ" d="M80,180 L180,180 L190,300 L60,300 Z" class="state-path target" />
+                    <text x="125" y="245" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">Rajasthan</text>
+                    
+                    <!-- Gujarat -->
+                    <path id="GJ" d="M30,310 L110,310 L120,400 L50,430 L20,380 Z" class="state-path target" />
+                    <text x="65" y="365" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">Gujarat</text>
+                    
+                    <!-- UP -->
+                    <path id="UP" d="M220,150 L340,150 L350,230 L200,240 Z" class="state-path target" />
+                    <text x="280" y="200" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">U.P.</text>
+
+                    <!-- MP -->
+                    <path id="MP" d="M190,250 L300,250 L280,330 L160,330 Z" class="state-path target" />
+                    <text x="230" y="295" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">M.P.</text>
+                    
+                    <!-- Maharashtra -->
+                    <path id="MH" d="M130,340 L250,340 L260,450 L120,450 Z" class="state-path target" />
+                    <text x="190" y="400" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">Maharashtra</text>
+                    
+                    <!-- Karnataka -->
+                    <path id="KA" d="M150,460 L230,460 L240,540 L160,540 Z" class="state-path target" />
+                    <text x="195" y="505" font-size="12" font-weight="bold" class="pointer-events-none" text-anchor="middle">Karnataka</text>
+                    
+                    <!-- Kerala -->
+                    <path id="KL" d="M180,550 L210,550 L210,595 L180,595 Z" class="state-path target" />
+                    <text x="195" y="580" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">KL</text>
+
+                    <!-- Tamil Nadu -->
+                    <path id="TN" d="M220,545 L260,545 L250,595 L215,595 Z" class="state-path target" />
+                    <text x="237" y="575" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">T.N.</text>
+                    
+                    <!-- West Bengal -->
+                    <path id="WB" d="M370,250 L420,250 L420,350 L360,350 Z" class="state-path target" />
+                    <text x="395" y="305" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">W.B.</text>
+                    
+                    <!-- Assam -->
+                    <path id="AS" d="M440,200 L500,200 L500,250 L440,250 Z" class="state-path target" />
+                    <text x="470" y="230" font-size="10" font-weight="bold" class="pointer-events-none" text-anchor="middle">Assam</text>
+                </g>
+                <text x="250" y="590" text-anchor="middle" font-size="10" fill="#94a3b8">Interactive Schematic Map</text>
+            </svg>
+        `;
+
+        let score = 0;
+        let draggedItem = null;
+        let currentLevel = 1;
+
+        function showWelcome() {
+            document.getElementById('welcome-screen').classList.remove('hidden');
+            document.getElementById('game-container').classList.add('hidden');
+        }
+
+        function startLevel(lvl) {
+            currentLevel = lvl;
+            const data = gameData[lvl];
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('level-title').innerText = data.title;
+            initLevel();
+        }
+
+        function initLevel() {
+            const data = gameData[currentLevel];
+            const sidebar = document.getElementById('sidebar');
+            const workspace = document.getElementById('workspace');
+            
+            sidebar.innerHTML = '';
+            workspace.innerHTML = '';
+
+            // Render Draggables
+            data.items.sort(() => Math.random() - 0.5).forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'crop-card bg-white p-3 rounded-2xl shadow-lg border-2 border-gray-100 flex flex-col items-center justify-center w-24 h-24 text-center hover:border-green-400 hover:shadow-xl transition-all';
+                el.draggable = true;
+                el.innerHTML = `<span class="text-3xl mb-1">${item.icon}</span><span class="text-[10px] uppercase font-bold text-gray-700">${item.name}</span>`;
+                el.dataset.id = item.id;
+                el.dataset.target = item.category || item.stateId;
+                
+                el.addEventListener('dragstart', (e) => {
+                    draggedItem = el;
+                    e.dataTransfer.setData('text/plain', item.id);
+                });
+                sidebar.appendChild(el);
+            });
+
+            if (data.type === 'sorting') {
+                workspace.className = 'flex-grow flex flex-col md:flex-row gap-6 p-4';
+                data.zones.forEach(zone => {
+                    const el = document.createElement('div');
+                    el.className = 'drop-zone flex-1 flex flex-col items-center p-6 rounded-3xl bg-green-50/50';
+                    el.innerHTML = `<h3 class="text-xl font-bold text-green-700 mb-1">${zone.name}</h3><p class="text-[10px] text-gray-500 mb-4">${zone.desc}</p><div class="items-area flex flex-wrap justify-center gap-3 w-full"></div>`;
+                    el.dataset.zoneId = zone.id;
+                    
+                    el.addEventListener('dragover', e => e.preventDefault());
+                    el.addEventListener('dragenter', () => el.classList.add('active'));
+                    el.addEventListener('dragleave', () => el.classList.remove('active'));
+                    el.addEventListener('drop', (e) => handleDrop(e, el));
+                    
+                    workspace.appendChild(el);
+                });
+            } else {
+                workspace.className = 'flex-grow flex items-center justify-center bg-blue-50/30 overflow-hidden';
+                workspace.innerHTML = indiaPaths;
+                
+                const paths = workspace.querySelectorAll('path');
+                paths.forEach(p => {
+                    p.addEventListener('dragover', e => e.preventDefault());
+                    p.addEventListener('dragenter', () => {
+                        if(!p.classList.contains('correct')) p.style.fill = '#fde047';
+                    });
+                    p.addEventListener('dragleave', () => {
+                        if(!p.classList.contains('correct')) p.style.fill = '#e2e8f0';
+                    });
+                    p.addEventListener('drop', (e) => handleDrop(e, p));
+                });
+            }
+        }
+
+        function handleDrop(e, targetEl) {
+            e.preventDefault();
+            const targetId = targetEl.dataset.zoneId || targetEl.id;
+            const expectedId = draggedItem.dataset.target;
+
+            if (targetId === expectedId) {
+                score += 10;
+                updateScore();
+                
+                if (targetEl.tagName === 'path') {
+                    targetEl.classList.add('correct');
+                    targetEl.style.fill = '#4ade80';
+                } else {
+                    targetEl.querySelector('.items-area').appendChild(draggedItem);
+                }
+                
+                draggedItem.draggable = false;
+                draggedItem.classList.add('opacity-40', 'pointer-events-none', 'scale-75');
+                
+                showModal("✅ Correct!", `Well done! That crop is widely grown in that region.`, "success");
+                checkCompletion();
+            } else {
+                if(targetEl.tagName === 'path' && !targetEl.classList.contains('correct')) {
+                    targetEl.style.fill = '#e2e8f0';
+                }
+                showModal("❌ Try Again", "This crop doesn't belong here. Think about its climatic needs!", "fail");
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').innerText = score;
+        }
+
+        function showModal(title, text, type) {
+            const modal = document.getElementById('msg-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            document.getElementById('modal-icon').innerText = (type === 'success' ? '🌟' : '🧐');
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('msg-modal').classList.add('hidden');
+        }
+
+        function checkCompletion() {
+            const items = document.querySelectorAll('#sidebar .crop-card:not(.pointer-events-none)');
+            if (items.length === 0) {
+                setTimeout(() => {
+                    showModal("🏆 LEVEL COMPLETE!", `Fantastic! You've mastered ${gameData[currentLevel].title}.`, "success");
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
